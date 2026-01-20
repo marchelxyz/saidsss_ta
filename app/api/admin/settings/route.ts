@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { isAdminSession } from "@/lib/admin";
+import { logAudit } from "@/lib/audit";
 
 export async function GET(request: Request) {
   if (!isAdminSession(request.headers.get("cookie"))) {
@@ -44,6 +45,12 @@ export async function PUT(request: Request) {
       body.address?.trim() ?? null
     ]
   );
+
+  await logAudit({
+    action: "settings_update",
+    entityType: "site_settings",
+    entityId: null
+  });
 
   return NextResponse.json({ ok: true });
 }

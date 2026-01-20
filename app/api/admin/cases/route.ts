@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { isAdminSession } from "@/lib/admin";
 import { slugify } from "@/lib/slug";
+import { logAudit } from "@/lib/audit";
 
 export async function GET(request: Request) {
   if (!isAdminSession(request.headers.get("cookie"))) {
@@ -61,6 +62,13 @@ export async function POST(request: Request) {
       body.published ?? false
     ]
   );
+
+  await logAudit({
+    action: "case_create",
+    entityType: "case",
+    entityId: result.rows[0]?.id,
+    payload: { title }
+  });
 
   return NextResponse.json({ ok: true, id: result.rows[0]?.id });
 }

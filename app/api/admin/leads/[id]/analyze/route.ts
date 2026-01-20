@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { analyzeLead } from "@/lib/ai";
 import { isAdminSession } from "@/lib/admin";
+import { logAudit } from "@/lib/audit";
 
 export async function POST(request: Request, context: { params: { id: string } }) {
   if (!isAdminSession(request.headers.get("cookie"))) {
@@ -46,6 +47,13 @@ export async function POST(request: Request, context: { params: { id: string } }
        where id = $1`,
       [context.params.id, analysis.summary, analysis]
     );
+
+    await logAudit({
+      action: "lead_ai_analyze",
+      entityType: "lead",
+      entityId: context.params.id,
+      payload: { summary: analysis.summary }
+    });
 
     return NextResponse.json({ ok: true, analysis });
   } catch (error) {

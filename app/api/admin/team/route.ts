@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { isAdminSession } from "@/lib/admin";
-import { slugify } from "@/lib/slug";
 import { logAudit } from "@/lib/audit";
 
 export async function GET(request: Request) {
@@ -11,8 +10,8 @@ export async function GET(request: Request) {
 
   const pool = getPool();
   const result = await pool.query(
-    `select id, title, slug, excerpt, published, created_at, updated_at
-     from articles order by created_at desc`
+    `select id, name, role, email, phone, active
+     from team_members order by created_at desc`
   );
 
   return NextResponse.json({ ok: true, items: result.rows });
@@ -24,44 +23,34 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => ({}))) as {
-    title?: string;
-    slug?: string;
-    excerpt?: string;
-    content?: string;
-    cover_url?: string;
-    published?: boolean;
+    name?: string;
+    role?: string;
+    email?: string;
+    phone?: string;
+    active?: boolean;
   };
 
-  const title = body.title?.trim();
-  if (!title) {
+  const name = body.name?.trim();
+  if (!name) {
     return NextResponse.json(
-      { ok: false, message: "Укажите заголовок." },
+      { ok: false, message: "Укажите имя." },
       { status: 400 }
     );
   }
 
-  const slug = body.slug?.trim() || slugify(title);
-
   const pool = getPool();
   const result = await pool.query(
-    `insert into articles (title, slug, excerpt, content, cover_url, published)
-     values ($1, $2, $3, $4, $5, $6)
+    `insert into team_members (name, role, email, phone, active)
+     values ($1, $2, $3, $4, $5)
      returning id`,
-    [
-      title,
-      slug,
-      body.excerpt ?? null,
-      body.content ?? null,
-      body.cover_url ?? null,
-      body.published ?? false
-    ]
+    [name, body.role ?? null, body.email ?? null, body.phone ?? null, body.active ?? true]
   );
 
   await logAudit({
-    action: "article_create",
-    entityType: "article",
+    action: "team_create",
+    entityType: "team_member",
     entityId: result.rows[0]?.id,
-    payload: { title }
+    payload: { name }
   });
 
   return NextResponse.json({ ok: true, id: result.rows[0]?.id });

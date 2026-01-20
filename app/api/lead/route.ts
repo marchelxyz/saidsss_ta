@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { analyzeLead } from "@/lib/ai";
 import { getAiConfig } from "@/lib/env";
+import { logAudit } from "@/lib/audit";
 
 type LeadPayload = {
   name?: string;
@@ -77,6 +78,12 @@ export async function POST(request: Request) {
          where id = $1`,
         [leadId, analysis.summary, analysis]
       );
+      await logAudit({
+        action: "lead_create_ai",
+        entityType: "lead",
+        entityId: leadId,
+        payload: { summary: analysis.summary }
+      });
     } catch {
       await pool.query(
         `update leads set analysis_status = 'failed' where id = $1`,
@@ -84,6 +91,12 @@ export async function POST(request: Request) {
       );
     }
   }
+
+  await logAudit({
+    action: "lead_create",
+    entityType: "lead",
+    entityId: leadId ?? null
+  });
 
   return NextResponse.json({ ok: true });
 }

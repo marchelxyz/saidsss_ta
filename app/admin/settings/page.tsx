@@ -1,5 +1,6 @@
 import { getPool } from "@/lib/db";
 import SettingsForm from "./SettingsForm";
+import StageManager from "./StageManager";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export default async function SettingsPage() {
         <p className="section-subtitle">Контакты и данные для сайта</p>
       </div>
       <SettingsForm initial={result.rows[0] ?? {}} />
+      <StageManager />
     </div>
   );
 }

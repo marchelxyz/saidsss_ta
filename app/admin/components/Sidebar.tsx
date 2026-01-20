@@ -8,6 +8,8 @@ const navItems = [
   { href: "/admin/leads", label: "CRM" },
   { href: "/admin/articles", label: "Статьи" },
   { href: "/admin/cases", label: "Кейсы" },
+  { href: "/admin/team", label: "Команда" },
+  { href: "/admin/audit", label: "История" },
   { href: "/admin/settings", label: "Настройки" }
 ];
 

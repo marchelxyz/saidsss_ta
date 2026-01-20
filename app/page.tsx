@@ -123,7 +123,8 @@ export default async function Home() {
           <a href="#benefits">Преимущества</a>
           <a href="#process">Процесс</a>
           <a href="#results">Результаты</a>
-          <a href="#cases">Кейсы</a>
+          {cases.length > 0 && <a href="#cases">Кейсы</a>}
+          {articles.length > 0 && <a href="#articles">Статьи</a>}
           <a href="#contact">Контакты</a>
         </nav>
         <a className="btn btn-secondary" href="#contact">

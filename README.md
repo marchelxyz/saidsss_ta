@@ -22,6 +22,13 @@ AI_API_BASE=https://api.openai.com/v1
 AI_MODEL=gpt-4o-mini
 ```
 
+### Зачем эти переменные
+
+- `ADMIN_PASSWORD` — пароль для входа в админку `/admin`.
+- `ADMIN_TOKEN` — токен для cookie-сессии админки. Можно задать любой длинный секрет.
+- `AI_API_KEY` — ключ для AI-анализа лидов и AI-помощника статей.
+- `AI_API_BASE` и `AI_MODEL` — позволяют использовать другой OpenAI‑совместимый провайдер/модель (по умолчанию `gpt-4o-mini`).
+
 ## Деплой на Railway (Web + Postgres)
 
 1. Создайте проект и сервис **Postgres** в Railway.

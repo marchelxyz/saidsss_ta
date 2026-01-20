@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { isAdminSession } from "@/lib/admin";
 import { slugify } from "@/lib/slug";
+import { logAudit } from "@/lib/audit";
 
 export async function GET(request: Request, context: { params: { id: string } }) {
   if (!isAdminSession(request.headers.get("cookie"))) {
@@ -97,6 +98,12 @@ export async function PATCH(request: Request, context: { params: { id: string } 
     values
   );
 
+  await logAudit({
+    action: "case_update",
+    entityType: "case",
+    entityId: context.params.id
+  });
+
   return NextResponse.json({ ok: true });
 }
 
@@ -107,5 +114,10 @@ export async function DELETE(request: Request, context: { params: { id: string }
 
   const pool = getPool();
   await pool.query(`delete from cases where id = $1`, [context.params.id]);
+  await logAudit({
+    action: "case_delete",
+    entityType: "case",
+    entityId: context.params.id
+  });
   return NextResponse.json({ ok: true });
 }

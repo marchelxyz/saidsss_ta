@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { isAdminSession } from "@/lib/admin";
-import { slugify } from "@/lib/slug";
 import { logAudit } from "@/lib/audit";
 
 export async function GET(request: Request) {
@@ -11,8 +10,7 @@ export async function GET(request: Request) {
 
   const pool = getPool();
   const result = await pool.query(
-    `select id, title, slug, excerpt, published, created_at, updated_at
-     from articles order by created_at desc`
+    `select id, name, color from lead_tags order by name`
   );
 
   return NextResponse.json({ ok: true, items: result.rows });
@@ -24,44 +22,32 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => ({}))) as {
-    title?: string;
-    slug?: string;
-    excerpt?: string;
-    content?: string;
-    cover_url?: string;
-    published?: boolean;
+    name?: string;
+    color?: string;
   };
 
-  const title = body.title?.trim();
-  if (!title) {
+  const name = body.name?.trim();
+  if (!name) {
     return NextResponse.json(
-      { ok: false, message: "Укажите заголовок." },
+      { ok: false, message: "Укажите тег." },
       { status: 400 }
     );
   }
 
-  const slug = body.slug?.trim() || slugify(title);
-
   const pool = getPool();
   const result = await pool.query(
-    `insert into articles (title, slug, excerpt, content, cover_url, published)
-     values ($1, $2, $3, $4, $5, $6)
+    `insert into lead_tags (name, color)
+     values ($1, $2)
+     on conflict (name) do update set color = excluded.color
      returning id`,
-    [
-      title,
-      slug,
-      body.excerpt ?? null,
-      body.content ?? null,
-      body.cover_url ?? null,
-      body.published ?? false
-    ]
+    [name, body.color ?? null]
   );
 
   await logAudit({
-    action: "article_create",
-    entityType: "article",
+    action: "tag_create",
+    entityType: "lead_tag",
     entityId: result.rows[0]?.id,
-    payload: { title }
+    payload: { name }
   });
 
   return NextResponse.json({ ok: true, id: result.rows[0]?.id });
