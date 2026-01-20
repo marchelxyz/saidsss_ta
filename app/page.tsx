@@ -22,7 +22,7 @@ const focusAreas = [
 const steps = [
   {
     title: "Аудит отделов и целей",
-    text: "Погружаемся в бизнес, выявляем узкие места, считаем потери и потенциал AI." 
+    text: "Погружаемся в бизнес, выявляем узкие места, считаем потери и потенциал AI."
   },
   {
     title: "Карта AI-внедрений",
@@ -237,4 +237,36 @@ export default function Home() {
                 <h3>Контакты</h3>
                 <p>Telegram: @teleagent_ai</p>
                 <p>Email: hello@teleagent.ai</p>
-                <p>Телефон: +7 (999) 0
+                <p>Телефон: +7 (999) 000-00-00</p>
+                <div style={{ marginTop: 20 }}>
+                  <p className="pill">География: удаленно по РФ и СНГ</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="footer">
+        <div className="container footer-grid">
+          <div>
+            <strong>TeleAgent</strong>
+            <p>Трансформация бизнеса с AI под ключ.</p>
+          </div>
+          <div>
+            <strong>Услуги</strong>
+            <p>Аудит процессов</p>
+            <p>AI-автоматизации</p>
+            <p>Обучение команд</p>
+          </div>
+          <div>
+            <strong>Контакты</strong>
+            <p>Telegram: @teleagent_ai</p>
+            <p>Email: hello@teleagent.ai</p>
+            <p>Телефон: +7 (999) 000-00-00</p>
+          </div>
+        </div>
+      </footer>
+    </>
+  );
+}
