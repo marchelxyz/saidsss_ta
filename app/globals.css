@@ -61,7 +61,7 @@ img {
 }
 
 .hero {
-  padding: 110px 0 70px;
+  padding: 72px 0 70px;
   background: radial-gradient(circle at top, rgba(122, 108, 255, 0.2), transparent 55%);
 }
 
@@ -309,6 +309,6 @@ img {
   }
 
   .hero {
-    padding-top: 90px;
+    padding-top: 56px;
   }
 }
