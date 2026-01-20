@@ -17,11 +17,12 @@ npm run dev
 DATABASE_URL=postgresql://user:password@host:port/db
 ```
 
-## База данных (Railway Postgres)
+## Деплой на Railway (Web + Postgres)
 
-1. Создайте Postgres в Railway.
-2. Скопируйте `DATABASE_URL` из Railway и добавьте в Vercel.
-3. Примените схему из `db/schema.sql`.
+1. Создайте проект и сервис **Postgres** в Railway.
+2. Создайте сервис **Web** (Next.js) в Railway.
+3. В сервисе **Web** добавьте переменную `DATABASE_URL` из Postgres.
+4. Примените схему из `db/schema.sql`.
 
 ```sql
 -- db/schema.sql
@@ -31,8 +32,7 @@ create table if not exists leads (...);
 
 ## Деплой
 
-- **Vercel**: подключите репозиторий, установите `DATABASE_URL`.
-- **Railway Web**: можно развернуть как Web Service, если хотите запускать Next.js там.
+- **Railway Web**: подключите репозиторий и задайте `DATABASE_URL`.
 - **Railway Postgres**: используется для хранения лидов.
 
 ## API
