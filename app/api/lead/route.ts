@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
+import { analyzeLead } from "@/lib/ai";
+import { getAiConfig } from "@/lib/env";
+import { logAudit } from "@/lib/audit";
 
 type LeadPayload = {
   name?: string;
@@ -44,11 +47,56 @@ export async function POST(request: Request) {
 
   const pool = getPool();
 
-  await pool.query(
-    `insert into leads (name, phone, email, company, role, summary, message, budget, timeline)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+  const insertResult = await pool.query(
+    `insert into leads (name, phone, email, company, role, summary, message, budget, timeline, status, analysis_status)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'new', 'pending')
+     returning id`,
     [name, phone, email, company, role, summary, message, budget, timeline]
   );
+
+  const leadId = insertResult.rows[0]?.id as string | undefined;
+  const { apiKey } = getAiConfig();
+
+  if (leadId && apiKey) {
+    try {
+      const analysis = await analyzeLead({
+        name,
+        company,
+        role,
+        summary,
+        message,
+        budget,
+        timeline
+      });
+
+      await pool.query(
+        `update leads
+         set analysis_status = 'done',
+             analysis_summary = $2,
+             analysis_json = $3,
+             analyzed_at = now()
+         where id = $1`,
+        [leadId, analysis.summary, analysis]
+      );
+      await logAudit({
+        action: "lead_create_ai",
+        entityType: "lead",
+        entityId: leadId,
+        payload: { summary: analysis.summary }
+      });
+    } catch {
+      await pool.query(
+        `update leads set analysis_status = 'failed' where id = $1`,
+        [leadId]
+      );
+    }
+  }
+
+  await logAudit({
+    action: "lead_create",
+    entityType: "lead",
+    entityId: leadId ?? null
+  });
 
   return NextResponse.json({ ok: true });
 }

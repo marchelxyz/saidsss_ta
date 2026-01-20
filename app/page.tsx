@@ -1,4 +1,7 @@
 import LeadForm from "./components/LeadForm";
+import { getPool } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
 
 const focusAreas = [
   {
@@ -68,7 +71,50 @@ const faqs = [
   }
 ];
 
-export default function Home() {
+export default async function Home() {
+  const pool = getPool();
+  const [articlesResult, casesResult, settingsResult] = await Promise.all([
+    pool.query(
+      `select id, title, excerpt, cover_url
+       from articles where published = true
+       order by created_at desc`
+    ),
+    pool.query(
+      `select id, title, industry, result, metrics
+       from cases where published = true
+       order by created_at desc`
+    ),
+    pool.query(`select telegram, email, phone, address from site_settings where id = 1`)
+  ]);
+
+  const articles = articlesResult.rows as Array<{
+    id: string;
+    title: string;
+    excerpt?: string | null;
+    cover_url?: string | null;
+  }>;
+
+  const cases = casesResult.rows as Array<{
+    id: string;
+    title: string;
+    industry?: string | null;
+    result?: string | null;
+    metrics?: string | null;
+  }>;
+
+  const settings = (settingsResult.rows[0] ?? {}) as {
+    telegram?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+  };
+
+  const contacts = {
+    telegram: settings.telegram ?? "@teleagent_ai",
+    email: settings.email ?? "hello@teleagent.ai",
+    phone: settings.phone ?? "+7 (999) 000-00-00",
+    address: settings.address ?? "Удаленно по РФ и СНГ"
+  };
   return (
     <>
       <header className="container nav">
@@ -76,7 +122,9 @@ export default function Home() {
         <nav className="nav-links">
           <a href="#benefits">Преимущества</a>
           <a href="#process">Процесс</a>
-          <a href="#cases">Результаты</a>
+          <a href="#results">Результаты</a>
+          {cases.length > 0 && <a href="#cases">Кейсы</a>}
+          {articles.length > 0 && <a href="#articles">Статьи</a>}
           <a href="#contact">Контакты</a>
         </nav>
         <a className="btn btn-secondary" href="#contact">
@@ -103,7 +151,7 @@ export default function Home() {
                 <a className="btn" href="#contact">
                   Получить аудит
                 </a>
-                <a className="btn btn-secondary" href="#cases">
+                <a className="btn btn-secondary" href="#results">
                   Посмотреть результаты
                 </a>
               </div>
@@ -189,7 +237,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="section" id="cases">
+        <section className="section" id="results">
           <div className="container">
             <h2 className="section-title">Результаты и эффекты</h2>
             <p className="section-subtitle">
@@ -206,6 +254,46 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {cases.length > 0 && (
+          <section className="section" id="cases">
+            <div className="container">
+              <h2 className="section-title">Кейсы</h2>
+              <p className="section-subtitle">
+                Реальные примеры внедрения AI и автоматизаций для бизнеса.
+              </p>
+              <div className="grid">
+                {cases.map((item) => (
+                  <div className="card" key={item.id}>
+                    <h3>{item.title}</h3>
+                    {item.industry && <p>Отрасль: {item.industry}</p>}
+                    {item.result && <p>Результат: {item.result}</p>}
+                    {item.metrics && <p>Метрики: {item.metrics}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {articles.length > 0 && (
+          <section className="section" id="articles">
+            <div className="container">
+              <h2 className="section-title">Статьи</h2>
+              <p className="section-subtitle">
+                Практика, разборы кейсов и подходы к AI-трансформации бизнеса.
+              </p>
+              <div className="grid">
+                {articles.map((article) => (
+                  <div className="card" key={article.id}>
+                    <h3>{article.title}</h3>
+                    <p>{article.excerpt ?? "Описание появится после редактирования."}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="section" id="faq">
           <div className="container">
@@ -235,11 +323,11 @@ export default function Home() {
               </div>
               <div className="card">
                 <h3>Контакты</h3>
-                <p>Telegram: @teleagent_ai</p>
-                <p>Email: hello@teleagent.ai</p>
-                <p>Телефон: +7 (999) 000-00-00</p>
+                <p>Telegram: {contacts.telegram}</p>
+                <p>Email: {contacts.email}</p>
+                <p>Телефон: {contacts.phone}</p>
                 <div style={{ marginTop: 20 }}>
-                  <p className="pill">География: удаленно по РФ и СНГ</p>
+                  <p className="pill">География: {contacts.address}</p>
                 </div>
               </div>
             </div>
@@ -261,9 +349,9 @@ export default function Home() {
           </div>
           <div>
             <strong>Контакты</strong>
-            <p>Telegram: @teleagent_ai</p>
-            <p>Email: hello@teleagent.ai</p>
-            <p>Телефон: +7 (999) 000-00-00</p>
+            <p>Telegram: {contacts.telegram}</p>
+            <p>Email: {contacts.email}</p>
+            <p>Телефон: {contacts.phone}</p>
           </div>
         </div>
       </footer>
