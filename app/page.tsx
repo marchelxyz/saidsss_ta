@@ -75,7 +75,7 @@ export default async function Home() {
   const pool = getPool();
   const [articlesResult, casesResult, settingsResult] = await Promise.all([
     pool.query(
-      `select id, title, excerpt, cover_url
+      `select id, title, slug, excerpt, cover_url
        from articles where published = true
        order by created_at desc`
     ),
@@ -90,6 +90,7 @@ export default async function Home() {
   const articles = articlesResult.rows as Array<{
     id: string;
     title: string;
+    slug: string;
     excerpt?: string | null;
     cover_url?: string | null;
   }>;
@@ -288,6 +289,9 @@ export default async function Home() {
                   <div className="card" key={article.id}>
                     <h3>{article.title}</h3>
                     <p>{article.excerpt ?? "Описание появится после редактирования."}</p>
+                    <a className="btn btn-secondary" href={`/articles/${article.slug}`}>
+                      Читать статью
+                    </a>
                   </div>
                 ))}
               </div>
