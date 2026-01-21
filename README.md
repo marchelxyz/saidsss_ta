@@ -20,6 +20,7 @@ ADMIN_TOKEN=your-random-token
 AI_API_KEY=your-ai-key
 AI_API_BASE=https://api.openai.com/v1
 AI_MODEL=gpt-4o-mini
+RUN_MIGRATIONS=true
 ```
 
 ### Зачем эти переменные
@@ -46,6 +47,11 @@ create table if not exists leads (...);
 
 - **Railway Web**: подключите репозиторий и задайте `DATABASE_URL`.
 - **Railway Postgres**: используется для хранения лидов.
+
+## Автоматическое создание таблиц
+
+Если хотите автоприменение `db/schema.sql` при старте, установите `RUN_MIGRATIONS=true`.
+Скрипт запускается в `prestart` и безопасен для повторного запуска.
 
 ## API
 
