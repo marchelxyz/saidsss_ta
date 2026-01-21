@@ -110,12 +110,13 @@ export default function LeadRow({
         assignee_id: taskAssignee || undefined
       })
     });
-    const data = (await response.json().catch(() => ({}))) as { id?: string };
+    const data = (await response.json().catch(() => ({}))) as { id?: string | null };
+    const newId = typeof data.id === "string" ? data.id : null;
 
-    if (response.ok && data.id) {
+    if (response.ok && newId) {
       setTasks((prev) => [
         {
-          id: data.id,
+          id: newId,
           title: taskTitle,
           status: "open",
           due_date: taskDue || null,
