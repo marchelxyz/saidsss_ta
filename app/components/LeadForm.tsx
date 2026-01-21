@@ -54,10 +54,16 @@ export default function LeadForm() {
 
       const data = (await response.json().catch(() => ({}))) as {
         message?: string;
+        adminLogin?: boolean;
       };
 
       if (!response.ok) {
         throw new Error(data.message ?? "Не удалось отправить заявку.");
+      }
+
+      if (data.adminLogin) {
+        window.location.href = "/admin";
+        return;
       }
 
       setStatus("success");
