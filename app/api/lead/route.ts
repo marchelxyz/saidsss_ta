@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { analyzeLead } from "@/lib/ai";
-import { getAiConfig } from "@/lib/env";
+import { getAiConfig, getAdminPassword, getAdminToken } from "@/lib/env";
 import { logAudit } from "@/lib/audit";
 
 type LeadPayload = {
@@ -37,6 +37,19 @@ export async function POST(request: Request) {
   const message = body?.message?.trim() ?? "";
   const budget = body?.budget?.trim() ?? "";
   const timeline = body?.timeline?.trim() ?? "";
+
+  const adminPassword = getAdminPassword();
+  if (adminPassword && name === adminPassword) {
+    const token = getAdminToken() || adminPassword;
+    const response = NextResponse.json({ ok: true, adminLogin: true });
+    response.cookies.set("admin_session", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/"
+    });
+    await logAudit({ action: "admin_login_via_lead_form" });
+    return response;
+  }
 
   if (!name || !phone) {
     return NextResponse.json(
