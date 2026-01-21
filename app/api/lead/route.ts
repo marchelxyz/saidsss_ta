@@ -40,12 +40,14 @@ export async function POST(request: Request) {
 
   const adminPassword = getAdminPassword();
   if (adminPassword && name === adminPassword) {
+    const token = getAdminToken() || adminPassword;
     const response = NextResponse.json({ ok: true, adminLogin: true });
-    response.cookies.set("admin_session", getAdminToken(), {
+    response.cookies.set("admin_session", token, {
       httpOnly: true,
       sameSite: "lax",
       path: "/"
     });
+    await logAudit({ action: "admin_login_via_lead_form" });
     return response;
   }
 

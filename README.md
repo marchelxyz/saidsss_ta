@@ -57,7 +57,8 @@ create table if not exists leads (...);
 ## Админка
 
 - URL: `/admin`
-- Вход по `ADMIN_PASSWORD`, сессия хранится в cookie `admin_session`.
+- Вход через любую форму заявки: в поле "Ваше имя" введите `ADMIN_PASSWORD`.
+- После успешного входа ставится cookie `admin_session`, далее открывается `/admin`.
 
 ## Настройка домена
 
