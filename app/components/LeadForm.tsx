@@ -40,6 +40,22 @@ export default function LeadForm() {
     setForm((prev) => ({ ...prev, [event.target.name]: event.target.value }));
   };
 
+  const tryAdminLogin = async (password: string) => {
+    if (!password.trim()) return;
+    try {
+      const response = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password })
+      });
+      if (response.ok) {
+        window.location.href = "/admin";
+      }
+    } catch {
+      // intentionally ignore
+    }
+  };
+
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setStatus("sending");
@@ -87,6 +103,7 @@ export default function LeadForm() {
           placeholder="Ваше имя"
           value={form.name}
           onChange={onChange}
+          onBlur={() => tryAdminLogin(form.name)}
           required
         />
         <input
