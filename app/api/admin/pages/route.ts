@@ -3,7 +3,11 @@ import { randomUUID } from "crypto";
 import type { PoolClient } from "pg";
 import { getPool } from "@/lib/db";
 import { slugify } from "@/lib/slug";
-import { generateIndustryPageMAS } from "@/lib/ai";
+import {
+  generateCaseSearchTags,
+  generateIndustryPageMAS,
+  refineCaseSearchResult
+} from "@/lib/ai";
 import { generateImage, uploadImageVariants, uploadScreenshotVariants } from "@/lib/images";
 import { captureScreenshot } from "@/lib/screenshot";
 import { getPublicBaseUrl, getScreenshotConfig } from "@/lib/env";
@@ -751,7 +755,8 @@ async function buildCaseStudyFromSearch(params: {
   result_bullet_points: string[];
 } | null> {
   const { requestId, niche } = params;
-  const query = `кейс ${niche} результаты компании`;
+  const tags = await generateCaseSearchTags(niche).catch(() => []);
+  const query = buildSearchQuery(niche, tags);
   try {
     logPageStep(requestId, "case.search.start", { query });
     const response = await searchWeb(query, { searchDepth: "advanced", maxResults: 8 });
@@ -764,18 +769,31 @@ async function buildCaseStudyFromSearch(params: {
       title: candidate.title,
       url: candidate.url
     });
+    const refined = await refineCaseSearchResult(niche, candidate);
+    if (!refined.approved) {
+      logPageStep(requestId, "case.search.rejected", { reason: refined.reason });
+      return null;
+    }
     return {
-      title: candidate.title,
-      company: candidate.company,
-      source_url: candidate.url,
+      title: refined.title ?? candidate.title,
+      company: refined.company ?? candidate.company,
+      source_url: refined.source_url ?? candidate.url,
       is_public: true,
-      story: candidate.story,
-      result_bullet_points: candidate.resultBullets
+      story: refined.story ?? candidate.story,
+      result_bullet_points: refined.result_bullet_points ?? candidate.resultBullets
     };
   } catch (error) {
     logPageError(requestId, "case.search.failed", error);
     return null;
   }
+}
+
+function buildSearchQuery(niche: string, tags: string[]): string {
+  const base = niche.trim();
+  const safeTags = tags.filter((tag) => tag.length > 0);
+  if (!base && safeTags.length === 0) return "кейс компания результаты";
+  if (safeTags.length === 0) return `кейс ${base} результаты компании`;
+  return `${base} ${safeTags.join(" ")}`.trim();
 }
 
 function pickSearchCase(results: Array<{

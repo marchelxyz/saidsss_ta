@@ -20,6 +20,22 @@ export type LeadAnalysisResult = {
   potential_value: string;
 };
 
+export type CaseSearchCandidate = {
+  title: string;
+  url: string;
+  content?: string;
+};
+
+export type CaseSearchRefinement = {
+  approved: boolean;
+  title?: string;
+  company?: string;
+  source_url?: string;
+  story?: string;
+  result_bullet_points?: string[];
+  reason?: string;
+};
+
 async function callAi(messages: Array<{ role: string; content: string }>) {
   const { apiKey, apiBase, model } = getAiConfig();
   if (!apiKey) {
@@ -72,6 +88,59 @@ async function callAi(messages: Array<{ role: string; content: string }>) {
     });
     throw error;
   }
+}
+
+/**
+ * Builds search tags for Tavily.
+ */
+export async function generateCaseSearchTags(niche: string): Promise<string[]> {
+  if (!niche.trim()) {
+    return ["кейс", "результаты", "компания"];
+  }
+  const result = await callAi([
+    {
+      role: "system",
+      content:
+        "Ты аналитик по исследованию кейсов. Верни JSON: { tags: string[] }. Теги короткие, 1-3 слова, без кавычек."
+    },
+    {
+      role: "user",
+      content: `Ниша: ${niche}\nСформируй 4-8 тегов для поиска публичных кейсов компаний.`
+    }
+  ]);
+  const tags = Array.isArray((result as any).tags) ? (result as any).tags : [];
+  return tags
+    .map((tag: unknown) => String(tag ?? "").trim())
+    .filter((tag) => tag.length > 0)
+    .slice(0, 8);
+}
+
+/**
+ * Validates and refines a Tavily case candidate using AI.
+ */
+export async function refineCaseSearchResult(
+  niche: string,
+  candidate: CaseSearchCandidate
+): Promise<CaseSearchRefinement> {
+  const result = await callAi([
+    {
+      role: "system",
+      content:
+        "Ты редактор кейсов. Проверь публичность и релевантность. Верни JSON: { approved, title, company, source_url, story, result_bullet_points, reason }."
+    },
+    {
+      role: "user",
+      content: JSON.stringify(
+        {
+          niche,
+          candidate
+        },
+        null,
+        2
+      )
+    }
+  ]);
+  return result as CaseSearchRefinement;
 }
 
 export async function analyzeLead(lead: LeadForAnalysis) {
