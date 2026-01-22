@@ -42,7 +42,7 @@ export default function SiteBlocks({ blocks, sourcePage }: SiteBlocksProps) {
                 </div>
                 <div className="card" style={cardStyle}>
                   <strong>TeleAgent</strong>
-                  <p>Аудит, внедрение и обучение под ключ.</p>
+                  <p>Сделай шаг в будущее вместе с TeleAgent.</p>
                 </div>
               </div>
             </section>
@@ -113,6 +113,9 @@ export default function SiteBlocks({ blocks, sourcePage }: SiteBlocksProps) {
             <section className="section" key={`process-${index}`} id={sectionId}>
               <div className="container">
                 <h2 className="section-title">{block.content.title}</h2>
+                {block.content.subtitle && (
+                  <p className="section-subtitle">{block.content.subtitle}</p>
+                )}
                 <div className="compare-grid">
                   <div className="card">
                     <strong>Как сейчас</strong>
@@ -138,31 +141,46 @@ export default function SiteBlocks({ blocks, sourcePage }: SiteBlocksProps) {
 
         if (block.block_type === "roi") {
           const sectionId = getSectionId(block.content.title as string | undefined);
+          const details = block.content.details as
+            | Array<{ title?: string; description?: string }>
+            | undefined;
+          const hasDetails = Array.isArray(details) && details.length > 0;
           return (
             <section className="section" key={`roi-${index}`} id={sectionId}>
               <div className="container">
                 <h2 className="section-title">{block.content.title}</h2>
                 <div className="stats-grid">
-                  <div className="stat-card">
-                    <strong>{block.content.hours_saved_per_month}</strong>
-                    <span>часов в месяц</span>
-                  </div>
-                  <div className="stat-card">
-                    <strong>{block.content.savings_percentage}%</strong>
-                    <span>снижение затрат</span>
-                  </div>
-                  <div className="stat-card">
-                    <strong>{block.content.revenue_uplift_percentage}%</strong>
-                    <span>рост выручки</span>
-                  </div>
-                  <div className="stat-card">
-                    <strong>{block.content.roi_percentage}%</strong>
-                    <span>ROI</span>
-                  </div>
-                  <div className="stat-card">
-                    <strong>{block.content.payback_period_months} мес</strong>
-                    <span>окупаемость</span>
-                  </div>
+                  {hasDetails ? (
+                    details.map((item, itemIndex) => (
+                      <div className="stat-card" key={`roi-${itemIndex}`}>
+                        <strong>{item.title}</strong>
+                        <span>{item.description}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <>
+                      <div className="stat-card">
+                        <strong>{block.content.hours_saved_per_month}</strong>
+                        <span>часов в месяц</span>
+                      </div>
+                      <div className="stat-card">
+                        <strong>{block.content.savings_percentage}%</strong>
+                        <span>снижение затрат</span>
+                      </div>
+                      <div className="stat-card">
+                        <strong>{block.content.revenue_uplift_percentage}%</strong>
+                        <span>рост выручки</span>
+                      </div>
+                      <div className="stat-card">
+                        <strong>{block.content.roi_percentage}%</strong>
+                        <span>ROI</span>
+                      </div>
+                      <div className="stat-card">
+                        <strong>{block.content.payback_period_months} мес</strong>
+                        <span>окупаемость</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </section>
