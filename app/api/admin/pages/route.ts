@@ -158,7 +158,21 @@ export async function GET() {
      order by p.created_at desc`
   );
 
-  return NextResponse.json({ ok: true, pages: result.rows });
+  const publicBaseUrl = getPublicBaseUrl();
+  const pages = result.rows.map((row) => {
+    const base = publicBaseUrl.replace(/\/$/, "");
+    const path =
+      row.page_type === "home"
+        ? "/"
+        : row.page_type === "industry"
+          ? `/industry/${row.slug}`
+          : `/p/${row.slug}`;
+    return {
+      ...row,
+      public_url: publicBaseUrl ? `${base}${path}` : ""
+    };
+  });
+  return NextResponse.json({ ok: true, pages });
 }
 
 export async function POST(request: Request) {

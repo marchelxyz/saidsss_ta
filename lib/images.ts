@@ -8,8 +8,11 @@ type GeneratedImage = {
   contentType: string;
 };
 
-async function generateWithGemini(prompt: string): Promise<GeneratedImage> {
-  const { apiKey, apiBase, model } = getImageConfig();
+async function generateWithGeminiModel(
+  prompt: string,
+  model: string
+): Promise<GeneratedImage> {
+  const { apiKey, apiBase } = getImageConfig();
   if (!apiKey) {
     throw new Error("IMAGE_API_KEY is not set");
   }
@@ -96,12 +99,17 @@ async function generateWithOpenAI(prompt: string): Promise<GeneratedImage> {
 }
 
 export async function generateImage(prompt: string) {
-  const { provider } = getImageConfig();
+  const { provider, model, fallbackModel } = getImageConfig();
   console.log(`[images] generate provider=${provider}, promptType=${typeof prompt}`);
   if (provider === "openai") {
     return generateWithOpenAI(prompt);
   }
-  return generateWithGemini(prompt);
+  try {
+    return await generateWithGeminiModel(prompt, model);
+  } catch (error) {
+    console.log("[images] primary model failed, trying fallback", error);
+    return generateWithGeminiModel(prompt, fallbackModel);
+  }
 }
 
 export async function uploadImageVariants(buffer: Buffer) {

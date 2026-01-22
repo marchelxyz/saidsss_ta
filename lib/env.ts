@@ -26,8 +26,10 @@ export function getImageConfig() {
   const apiBase =
     process.env.IMAGE_API_BASE ?? "https://generativelanguage.googleapis.com/v1beta";
   const model = process.env.IMAGE_MODEL ?? "models/gemini-3-pro-image-preview";
+  const fallbackModel =
+    process.env.IMAGE_FALLBACK_MODEL ?? "models/gemini-2.0-flash-image-generation";
   const provider = process.env.IMAGE_PROVIDER ?? "gemini";
-  return { apiKey, apiBase, model, provider };
+  return { apiKey, apiBase, model, fallbackModel, provider };
 }
 
 export function getS3Config() {
