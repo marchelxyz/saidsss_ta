@@ -193,10 +193,11 @@ export async function POST(request: Request) {
   const generate = Boolean(body?.generate);
 
   const pool = getPool();
+  const client = await pool.connect();
   const { enabled: screenshotEnabled } = getScreenshotConfig();
   const publicBaseUrl = getPublicBaseUrl();
 
-  await pool.query("begin");
+  await client.query("begin");
   try {
     let metaDescription = "";
     let pageTitle = title;
@@ -208,7 +209,8 @@ export async function POST(request: Request) {
 
     if (pageType === "industry" && generate) {
       if (!niche) {
-        await pool.query("rollback");
+        await client.query("rollback");
+        client.release();
         return NextResponse.json(
           { ok: false, message: "Укажите нишу." },
           { status: 400 }
@@ -249,7 +251,7 @@ export async function POST(request: Request) {
       blocks = buildIndustryBlocks({ ...draft, image: imageData });
     }
 
-    const pageResult = await pool.query(
+    const pageResult = await client.query(
       `insert into site_pages (title, slug, page_type, niche, meta_description, published)
        values ($1, $2, $3, $4, $5, true)
        returning id`,
@@ -269,7 +271,7 @@ export async function POST(request: Request) {
       blocks.forEach((block) => {
         params.push(block.block_type, block.content, block.sort_order);
       });
-      await pool.query(
+      await client.query(
         `insert into site_blocks (page_id, block_type, content, sort_order)
          values ${insertValues}`,
         params
@@ -283,7 +285,8 @@ export async function POST(request: Request) {
       payload: { pageType, slug, niche }
     });
 
-    await pool.query("commit");
+    await client.query("commit");
+    client.release();
 
     if (screenshotEnabled && publicBaseUrl) {
       try {
@@ -313,7 +316,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, id: pageId, slug });
   } catch (error) {
-    await pool.query("rollback");
+    try {
+      await client.query("rollback");
+    } finally {
+      client.release();
+    }
     return NextResponse.json(
       { ok: false, message: "Не удалось создать страницу." },
       { status: 500 }
