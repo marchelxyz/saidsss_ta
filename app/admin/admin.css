@@ -186,6 +186,21 @@
   padding-bottom: 120px;
 }
 
+.builder-panel {
+  margin-top: 16px;
+}
+
+.builder-panel-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  background: rgba(15, 18, 25, 0.7);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
 .builder-block {
   position: relative;
   outline: 1px dashed transparent;
