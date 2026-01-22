@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { slugify } from "@/lib/slug";
-import { draftIndustryPage } from "@/lib/ai";
+import { generateIndustryPageMAS } from "@/lib/ai";
 import { generateImage, uploadImageVariants } from "@/lib/images";
 import { logAudit } from "@/lib/audit";
 
@@ -196,7 +196,7 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      const draft = await draftIndustryPage(niche);
+      const draft = await generateIndustryPageMAS(niche);
       let imageData:
         | {
             prompt?: string;
@@ -206,7 +206,9 @@ export async function POST(request: Request) {
           }
         | undefined;
       try {
-        const imagePrompt = `Инфографика для ниши: ${niche}. Тема: автоматизация процессов, рост эффективности, AI-помощники, строгий бизнес-стиль, темный фон, акцентные синие/фиолетовые цвета.`;
+        const imagePrompt =
+          draft.image_prompt ||
+          `Инфографика для ниши: ${niche}. Тема: автоматизация процессов, рост эффективности, AI-помощники, строгий бизнес-стиль, темный фон, акцентные синие/фиолетовые цвета.`;
         const generated = await generateImage(imagePrompt);
         const uploaded = await uploadImageVariants(generated.buffer);
         imageData = {
