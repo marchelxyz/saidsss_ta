@@ -11,7 +11,7 @@ export async function GET(request: Request) {
 
   const pool = getPool();
   const result = await pool.query(
-    `select id, title, slug, industry, published, created_at, updated_at
+    `select id, title, slug, company_name, provider_name, source_url, country, industry, published, created_at, updated_at
      from cases order by created_at desc`
   );
 
@@ -26,6 +26,10 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
     title?: string;
     slug?: string;
+    company_name?: string;
+    provider_name?: string;
+    source_url?: string;
+    country?: string;
     industry?: string;
     challenge?: string;
     solution?: string;
@@ -47,12 +51,16 @@ export async function POST(request: Request) {
   const pool = getPool();
 
   const result = await pool.query(
-    `insert into cases (title, slug, industry, challenge, solution, result, metrics, cover_url, published)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `insert into cases (title, slug, company_name, provider_name, source_url, country, industry, challenge, solution, result, metrics, cover_url, published)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
      returning id`,
     [
       title,
       slug,
+      body.company_name ?? null,
+      body.provider_name ?? null,
+      body.source_url ?? null,
+      body.country ?? null,
       body.industry ?? null,
       body.challenge ?? null,
       body.solution ?? null,

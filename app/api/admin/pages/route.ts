@@ -21,6 +21,10 @@ type PageGenerationStatus = "pending" | "ready" | "failed";
 type CaseRow = {
   id: string;
   title: string;
+  company_name?: string | null;
+  provider_name?: string | null;
+  source_url?: string | null;
+  country?: string | null;
   industry?: string | null;
   challenge?: string | null;
   solution?: string | null;
@@ -40,9 +44,11 @@ function buildIndustryBlocks(draft: {
     payback_period_months: number;
   };
   comparison_table: Array<{ feature: string; human: string; ai: string }>;
-  case_study: {
+  case_study?: {
     title: string;
     company: string;
+    provider?: string;
+    country?: string;
     source_url?: string;
     is_public: boolean;
     story: string;
@@ -107,19 +113,25 @@ function buildIndustryBlocks(draft: {
       },
       sort_order: 4
     },
-    {
-      block_type: "case_study",
-      content: {
-        title: draft.case_study.title,
-        short_title: "Кейс",
-        story: draft.case_study.story,
-        result_bullet_points: draft.case_study.result_bullet_points,
-        company: draft.case_study.company,
-        source_url: draft.case_study.source_url,
-        is_public: draft.case_study.is_public
-      },
-      sort_order: 5
-    },
+    ...(draft.case_study
+      ? [
+          {
+            block_type: "case_study",
+            content: {
+              title: draft.case_study.title,
+              short_title: "Кейс",
+              story: draft.case_study.story,
+              result_bullet_points: draft.case_study.result_bullet_points,
+              company: draft.case_study.company,
+              provider: draft.case_study.provider,
+              country: draft.case_study.country,
+              source_url: draft.case_study.source_url,
+              is_public: draft.case_study.is_public
+            },
+            sort_order: 5
+          }
+        ]
+      : []),
     ...(draft.image?.avifUrl || draft.image?.webpUrl || draft.image?.jpgUrl
       ? [
           {
@@ -636,7 +648,7 @@ function buildRoiDetails(input: {
  */
 async function fetchPublishedCases(client: PoolClient, niche: string) {
   const rows = await client.query(
-    `select id, title, industry, challenge, solution, result, metrics
+    `select id, title, company_name, provider_name, source_url, country, industry, challenge, solution, result, metrics
      from cases
      where published = true
      order by created_at desc`
@@ -658,12 +670,16 @@ function buildCaseStudyFromCases(
 ): {
   title: string;
   company: string;
+  provider?: string;
+  country?: string;
   source_url?: string;
   is_public: boolean;
   story: string;
   result_bullet_points: string[];
 } | null {
-  const item = cases[0];
+  const item = cases.find(
+    (entry) => entry.company_name && entry.source_url
+  );
   if (!item) return null;
   const storyParts = [
     item.challenge ? `Проблема: ${item.challenge}` : "",
@@ -676,11 +692,13 @@ function buildCaseStudyFromCases(
     .filter(Boolean);
   const story =
     storyParts.join(" ") ||
-    `Внедрение TeleAgent для ниши ${niche}: настройка процессов, автоматизация и контроль метрик.`;
+    `Кейс из ниши ${niche}: автоматизация процессов и контроль ключевых метрик.`;
   return {
     title: item.title || `Кейс: ${niche}`,
-    company: item.title || "Реальный кейс",
-    source_url: undefined,
+    company: item.company_name || item.title || "Реальный кейс",
+    provider: item.provider_name ?? undefined,
+    country: item.country ?? undefined,
+    source_url: item.source_url ?? undefined,
     is_public: true,
     story,
     result_bullet_points: bullets.length > 0 ? bullets : ["Снижение потерь", "Рост прозрачности"]
