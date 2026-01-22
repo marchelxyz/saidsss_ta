@@ -196,7 +196,7 @@ export async function generateIndustryPageMAS(niche: string) {
 
   let architectDraft = await runAgent(
     "Architect",
-    `Ты B2B-маркетолог в инфостиле. Используй данные аудитора. ${MAS_RULES} Верни JSON: { hero, process_breakdown, comparison_table, software_stack, case_study }. В case_study: {title, company, source_url, is_public, story, result_bullet_points}.`,
+    `Ты B2B-маркетолог в инфостиле. Используй данные аудитора. ${MAS_RULES} Верни JSON: { hero, process_breakdown, comparison_table, case_study }. В case_study: {title, company, source_url, is_public, story, result_bullet_points}.`,
     { niche, audit: auditor }
   );
   log("architect done");
@@ -217,7 +217,7 @@ export async function generateIndustryPageMAS(niche: string) {
     if (!approved) {
       architectDraft = await runAgent(
         "Architect",
-        `Ты B2B-маркетолог в инфостиле. Исправь по фидбеку. ${MAS_RULES} Верни JSON: { hero, process_breakdown, comparison_table, software_stack, case_study }.`,
+        `Ты B2B-маркетолог в инфостиле. Исправь по фидбеку. ${MAS_RULES} Верни JSON: { hero, process_breakdown, comparison_table, case_study }.`,
         { niche, audit: auditor, feedback: criticFeedback, previous_draft: architectDraft }
       );
       log("architect revised");
@@ -229,7 +229,7 @@ export async function generateIndustryPageMAS(niche: string) {
     log("critic not approved after max attempts, running refiner");
     architectDraft = await runAgent(
       "Refiner",
-      `Ты редактор-валидатор. Исправь все замечания критика и согласуй цифры. ${MAS_RULES} Убедись, что проценты реалистичны (0-100), нет противоречий в таблицах и кейсе. Верни JSON: { hero, process_breakdown, comparison_table, software_stack, case_study }.`,
+      `Ты редактор-валидатор. Исправь все замечания критика и согласуй цифры. ${MAS_RULES} Убедись, что проценты реалистичны (0-100), нет противоречий в таблицах и кейсе. Верни JSON: { hero, process_breakdown, comparison_table, case_study }.`,
       { niche, audit: auditor, feedback: criticFeedback, previous_draft: architectDraft }
     );
     log("refiner done");
@@ -237,7 +237,7 @@ export async function generateIndustryPageMAS(niche: string) {
 
   const artDirector = await runAgent(
     "ArtDirector",
-    `Ты арт-директор. Сгенерируй промпт изображения в стиле Dark Tech Corporate, минимализм, неон, темный фон. Верни JSON: { image_prompt }.`,
+    `Ты арт-директор. Сгенерируй промпт изображения в стиле Dark Tech Corporate, минимализм, неон, темный фон. Без людей, лиц, врачей, пациентов и реальных фотографий — только абстрактная графика, схемы, диаграммы. Верни JSON: { image_prompt }.`,
     { niche, hero: architectDraft.hero }
   );
   log("art director done");
@@ -251,7 +251,7 @@ export async function generateIndustryPageMAS(niche: string) {
 
   const uiQa = await runAgent(
     "UIQA",
-    `Ты верстальщик. Проверь структуру и длину. Заголовки <= 60 символов, массивы не пустые. Верни исправленный JSON с полями hero, pain_points, process_breakdown, comparison_table, software_stack, case_study.`,
+    `Ты верстальщик. Проверь структуру и длину. Заголовки <= 60 символов, массивы не пустые. Верни исправленный JSON с полями hero, pain_points, process_breakdown, comparison_table, case_study.`,
     { niche, draft: architectDraft, audit: auditor }
   );
   log("ui qa done");
@@ -305,7 +305,7 @@ export async function generateIndustryPageMAS(niche: string) {
       )
     },
     software_stack: normalizeStringList(uiQa.software_stack),
-    comparison_table: normalizeComparison(uiQa.comparison_table),
+    comparison_table: normalizeComparison(uiQa.comparison_table, niche),
     case_study: normalizeCaseStudy(uiQa.case_study, niche),
     meta_description: String((growth.meta_description as string) ?? "").trim(),
     image_prompt: String((artDirector.image_prompt as string) ?? "").trim()
@@ -368,12 +368,14 @@ function normalizeStringList(input: unknown): string[] {
 }
 
 function normalizeComparison(
-  input: unknown
+  input: unknown,
+  niche: string
 ): IndustryPageDraft["comparison_table"] {
-  if (!Array.isArray(input)) return [];
-  return input
+  if (!Array.isArray(input)) return buildComparisonFallback(niche);
+  const rows = input
     .map((item) => item as IndustryPageDraft["comparison_table"][number])
     .filter((item) => Boolean(item?.feature));
+  return rows.length > 0 ? rows : buildComparisonFallback(niche);
 }
 
 function normalizeCaseStudy(
@@ -400,4 +402,33 @@ function normalizeCaseStudy(
         ? candidate.result_bullet_points
         : fallback.result_bullet_points
   };
+}
+
+/**
+ * Возвращает базовое сравнение людей и AI, если модель не заполнила таблицу.
+ */
+function buildComparisonFallback(niche: string): IndustryPageDraft["comparison_table"] {
+  const suffix = niche ? ` (${niche})` : "";
+  return [
+    {
+      feature: `Скорость реакции${suffix}`,
+      human: "Минуты или часы",
+      ai: "Секунды и автоматические сценарии"
+    },
+    {
+      feature: `Точность данных${suffix}`,
+      human: "Ошибки из-за ручного ввода",
+      ai: "Проверка и консолидация в потоке"
+    },
+    {
+      feature: `Прозрачность процессов${suffix}`,
+      human: "Разрозненные отчеты",
+      ai: "Единые дашборды и контроль статусов"
+    },
+    {
+      feature: `Стабильность качества${suffix}`,
+      human: "Зависит от людей",
+      ai: "Регламент + автоматические проверки"
+    }
+  ];
 }

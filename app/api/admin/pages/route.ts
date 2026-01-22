@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
+import type { PoolClient } from "pg";
 import { getPool } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 import { generateIndustryPageMAS } from "@/lib/ai";
@@ -17,6 +18,15 @@ type PageCreatePayload = {
 };
 
 type PageGenerationStatus = "pending" | "ready" | "failed";
+type CaseRow = {
+  id: string;
+  title: string;
+  industry?: string | null;
+  challenge?: string | null;
+  solution?: string | null;
+  result?: string | null;
+  metrics?: string | null;
+};
 
 function buildIndustryBlocks(draft: {
   hero: { title: string; subtitle: string };
@@ -29,7 +39,6 @@ function buildIndustryBlocks(draft: {
     roi_percentage: number;
     payback_period_months: number;
   };
-  software_stack: string[];
   comparison_table: Array<{ feature: string; human: string; ai: string }>;
   case_study: {
     title: string;
@@ -41,6 +50,7 @@ function buildIndustryBlocks(draft: {
   };
   image?: { prompt?: string; avifUrl?: string; webpUrl?: string; jpgUrl?: string };
 }) {
+  const roiDetails = buildRoiDetails(draft.roi_calculator);
   return [
     {
       block_type: "hero",
@@ -67,6 +77,8 @@ function buildIndustryBlocks(draft: {
       content: {
         title: "Было → Стало",
         short_title: "Процесс",
+        subtitle:
+          "Сравнение типичного процесса в нише и подхода TeleAgent: что меняется в управлении, контроле и скорости.",
         old_way: draft.process_breakdown.old_way,
         new_way_ai: draft.process_breakdown.new_way_ai
       },
@@ -81,18 +93,10 @@ function buildIndustryBlocks(draft: {
         savings_percentage: draft.roi_calculator.savings_percentage,
         revenue_uplift_percentage: draft.roi_calculator.revenue_uplift_percentage,
         roi_percentage: draft.roi_calculator.roi_percentage,
-        payback_period_months: draft.roi_calculator.payback_period_months
+        payback_period_months: draft.roi_calculator.payback_period_months,
+        details: roiDetails
       },
       sort_order: 3
-    },
-    {
-      block_type: "badges",
-      content: {
-        title: "Интеграции и стек",
-        short_title: "Стек",
-        items: draft.software_stack
-      },
-      sort_order: 4
     },
     {
       block_type: "comparison_table",
@@ -101,7 +105,7 @@ function buildIndustryBlocks(draft: {
         short_title: "Сравнение",
         rows: draft.comparison_table
       },
-      sort_order: 5
+      sort_order: 4
     },
     {
       block_type: "case_study",
@@ -114,21 +118,22 @@ function buildIndustryBlocks(draft: {
         source_url: draft.case_study.source_url,
         is_public: draft.case_study.is_public
       },
-      sort_order: 6
+      sort_order: 5
     },
     ...(draft.image?.avifUrl || draft.image?.webpUrl || draft.image?.jpgUrl
       ? [
           {
             block_type: "image",
             content: {
-              title: "Инфографика",
-              short_title: "Инфографика",
+              title: "Процесс внедрения",
+              short_title: "Внедрение",
+              text: "Ключевые этапы запуска TeleAgent в компании: аудит, пилот, масштабирование.",
               image_prompt: draft.image.prompt ?? "",
               image_avif_url: draft.image.avifUrl,
               image_webp_url: draft.image.webpUrl,
               image_url: draft.image.jpgUrl
             },
-            sort_order: 7
+            sort_order: 6
           }
         ]
       : []),
@@ -139,7 +144,7 @@ function buildIndustryBlocks(draft: {
         short_title: "Контакты",
         subtitle: "Оставьте контакты — вернемся с планом аудита."
       },
-      sort_order: 8
+      sort_order: 7
     }
   ];
 }
@@ -444,14 +449,20 @@ async function processIndustryPageGeneration(params: {
   logPageStep(requestId, "generate.worker.start", { pageId });
   let transactionStarted = false;
   try {
+    const caseRows = await fetchPublishedCases(client, niche);
     const draft = await generateIndustryPageMAS(niche);
     logPageStep(requestId, "generate.industry.draft_ready", summarizeIndustryDraft(draft));
+    const caseStudyOverride = buildCaseStudyFromCases(caseRows, niche);
     const imageData = await buildImageData({
       requestId,
       niche,
       imagePrompt: draft.image_prompt
     });
-    const blocks = buildIndustryBlocks({ ...draft, image: imageData });
+    const blocks = buildIndustryBlocks({
+      ...draft,
+      case_study: caseStudyOverride ?? draft.case_study,
+      image: imageData
+    });
     logPageStep(requestId, "blocks.built", { count: blocks.length });
 
     await client.query("begin");
@@ -558,7 +569,7 @@ async function buildImageData(params: {
     const safePrompt =
       (typeof imagePrompt === "string" && imagePrompt.trim()) ||
       (imagePrompt ? JSON.stringify(imagePrompt) : "") ||
-      `Инфографика для ниши: ${niche}. Тема: автоматизация процессов, рост эффективности, AI-помощники, строгий бизнес-стиль, темный фон, акцентные синие/фиолетовые цвета.`;
+      `Абстрактная бизнес-графика для ниши: ${niche}. Тема: автоматизация процессов, рост эффективности, AI-помощники. Без людей и лиц. Строгий бизнес-стиль, темный фон, акцентные синие/фиолетовые цвета, схемы и диаграммы.`;
     logPageStep(requestId, "image.generate.prompt_ready", {
       promptLength: safePrompt.length
     });
@@ -579,4 +590,99 @@ async function buildImageData(params: {
     logPageError(requestId, "image.generate.failed", error);
     return undefined;
   }
+}
+
+/**
+ * Формирует объяснения к метрикам ROI.
+ */
+function buildRoiDetails(input: {
+  hours_saved_per_month: number;
+  savings_percentage: number;
+  revenue_uplift_percentage: number;
+  roi_percentage: number;
+  payback_period_months: number;
+}) {
+  return [
+    {
+      key: "hours_saved_per_month",
+      title: `${input.hours_saved_per_month} часов в месяц`,
+      description: "Автоматизация задач и проверок убирает ручные операции."
+    },
+    {
+      key: "savings_percentage",
+      title: `${input.savings_percentage}% снижение затрат`,
+      description: "Сокращаем лишние процессы, ошибки и перерасход времени."
+    },
+    {
+      key: "revenue_uplift_percentage",
+      title: `${input.revenue_uplift_percentage}% рост выручки`,
+      description: "Быстрее обрабатываем заявки и не теряем сделки."
+    },
+    {
+      key: "roi_percentage",
+      title: `${input.roi_percentage}% ROI`,
+      description: "Эффект складывается из экономии времени и роста продаж."
+    },
+    {
+      key: "payback_period_months",
+      title: `${input.payback_period_months} мес окупаемость`,
+      description: "Быстрый возврат за счет пилота и поэтапного внедрения."
+    }
+  ];
+}
+
+/**
+ * Выбирает опубликованные кейсы под нишу.
+ */
+async function fetchPublishedCases(client: PoolClient, niche: string) {
+  const rows = await client.query(
+    `select id, title, industry, challenge, solution, result, metrics
+     from cases
+     where published = true
+     order by created_at desc`
+  );
+  const allCases = rows.rows as CaseRow[];
+  if (!niche) return allCases;
+  const match = allCases.filter((item) =>
+    String(item.industry ?? "").toLowerCase().includes(niche.toLowerCase())
+  );
+  return match.length > 0 ? match : allCases;
+}
+
+/**
+ * Превращает кейсы из базы в блок кейса.
+ */
+function buildCaseStudyFromCases(
+  cases: CaseRow[],
+  niche: string
+): {
+  title: string;
+  company: string;
+  source_url?: string;
+  is_public: boolean;
+  story: string;
+  result_bullet_points: string[];
+} | null {
+  const item = cases[0];
+  if (!item) return null;
+  const storyParts = [
+    item.challenge ? `Проблема: ${item.challenge}` : "",
+    item.solution ? `Решение: ${item.solution}` : "",
+    item.result ? `Результат: ${item.result}` : ""
+  ].filter(Boolean);
+  const bullets = (item.metrics ?? "")
+    .split(/\n|;/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  const story =
+    storyParts.join(" ") ||
+    `Внедрение TeleAgent для ниши ${niche}: настройка процессов, автоматизация и контроль метрик.`;
+  return {
+    title: item.title || `Кейс: ${niche}`,
+    company: item.title || "Реальный кейс",
+    source_url: undefined,
+    is_public: true,
+    story,
+    result_bullet_points: bullets.length > 0 ? bullets : ["Снижение потерь", "Рост прозрачности"]
+  };
 }
