@@ -22,6 +22,9 @@ create table if not exists leads (
   created_at timestamptz default now()
 );
 
+alter table leads
+  add column if not exists source_page text;
+
 create table if not exists articles (
   id uuid primary key default gen_random_uuid(),
   title text not null,
