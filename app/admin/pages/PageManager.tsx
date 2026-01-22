@@ -12,6 +12,7 @@ type PageRow = {
   meta_description: string | null;
   published: boolean;
   leads_count: number;
+  public_url?: string | null;
 };
 
 type PageManagerProps = {
@@ -28,6 +29,7 @@ export default function PageManager({ initialPages }: PageManagerProps) {
   const homePage = useMemo(() => pages.find((item) => item.page_type === "home"), [pages]);
 
   const publicLink = (page: PageRow) => {
+    if (page.public_url) return page.public_url;
     if (page.page_type === "home") return "/";
     if (page.page_type === "industry") return `/industry/${page.slug}`;
     return `/p/${page.slug}`;

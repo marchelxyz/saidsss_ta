@@ -24,6 +24,7 @@ IMAGE_PROVIDER=gemini
 IMAGE_API_KEY=your-image-key
 IMAGE_API_BASE=https://generativelanguage.googleapis.com/v1beta
 IMAGE_MODEL=models/gemini-3-pro-image-preview
+IMAGE_FALLBACK_MODEL=models/gemini-2.0-flash-image-generation
 S3_ENDPOINT=https://storage.yandexcloud.net
 S3_REGION=ru-central1
 S3_BUCKET=your-bucket
