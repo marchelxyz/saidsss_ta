@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 import { draftIndustryPage } from "@/lib/ai";
+import { generateImage, uploadImageVariants } from "@/lib/images";
 import { logAudit } from "@/lib/audit";
 
 type PageCreatePayload = {
@@ -18,13 +19,22 @@ function buildIndustryBlocks(draft: {
   process_breakdown: { old_way: string[]; new_way_ai: string[] };
   roi_calculator: {
     hours_saved_per_month: number;
-    money_saved_per_year: number;
+    savings_percentage: number;
+    revenue_uplift_percentage: number;
     roi_percentage: number;
     payback_period_months: number;
   };
   software_stack: string[];
   comparison_table: Array<{ feature: string; human: string; ai: string }>;
-  case_study: { title: string; story: string; result_bullet_points: string[] };
+  case_study: {
+    title: string;
+    company: string;
+    source_url?: string;
+    is_public: boolean;
+    story: string;
+    result_bullet_points: string[];
+  };
+  image?: { prompt?: string; avifUrl?: string; webpUrl?: string; jpgUrl?: string };
 }) {
   return [
     {
@@ -60,10 +70,11 @@ function buildIndustryBlocks(draft: {
     {
       block_type: "roi",
       content: {
-        title: "ROI и окупаемость",
+        title: "ROI и эффект",
         short_title: "ROI",
         hours_saved_per_month: draft.roi_calculator.hours_saved_per_month,
-        money_saved_per_year: draft.roi_calculator.money_saved_per_year,
+        savings_percentage: draft.roi_calculator.savings_percentage,
+        revenue_uplift_percentage: draft.roi_calculator.revenue_uplift_percentage,
         roi_percentage: draft.roi_calculator.roi_percentage,
         payback_period_months: draft.roi_calculator.payback_period_months
       },
@@ -93,10 +104,29 @@ function buildIndustryBlocks(draft: {
         title: draft.case_study.title,
         short_title: "Кейс",
         story: draft.case_study.story,
-        result_bullet_points: draft.case_study.result_bullet_points
+        result_bullet_points: draft.case_study.result_bullet_points,
+        company: draft.case_study.company,
+        source_url: draft.case_study.source_url,
+        is_public: draft.case_study.is_public
       },
       sort_order: 6
     },
+    ...(draft.image?.avifUrl || draft.image?.webpUrl || draft.image?.jpgUrl
+      ? [
+          {
+            block_type: "image",
+            content: {
+              title: "Инфографика",
+              short_title: "Инфографика",
+              image_prompt: draft.image.prompt ?? "",
+              image_avif_url: draft.image.avifUrl,
+              image_webp_url: draft.image.webpUrl,
+              image_url: draft.image.jpgUrl
+            },
+            sort_order: 7
+          }
+        ]
+      : []),
     {
       block_type: "contact",
       content: {
@@ -104,7 +134,7 @@ function buildIndustryBlocks(draft: {
         short_title: "Контакты",
         subtitle: "Оставьте контакты — вернемся с планом аудита."
       },
-      sort_order: 7
+      sort_order: 8
     }
   ];
 }
@@ -167,9 +197,30 @@ export async function POST(request: Request) {
         );
       }
       const draft = await draftIndustryPage(niche);
+      let imageData:
+        | {
+            prompt?: string;
+            avifUrl?: string;
+            webpUrl?: string;
+            jpgUrl?: string;
+          }
+        | undefined;
+      try {
+        const imagePrompt = `Инфографика для ниши: ${niche}. Тема: автоматизация процессов, рост эффективности, AI-помощники, строгий бизнес-стиль, темный фон, акцентные синие/фиолетовые цвета.`;
+        const generated = await generateImage(imagePrompt);
+        const uploaded = await uploadImageVariants(generated.buffer);
+        imageData = {
+          prompt: imagePrompt,
+          avifUrl: uploaded.avifUrl,
+          webpUrl: uploaded.webpUrl,
+          jpgUrl: uploaded.jpgUrl
+        };
+      } catch {
+        imageData = undefined;
+      }
       pageTitle = draft.hero.title;
       metaDescription = draft.meta_description;
-      blocks = buildIndustryBlocks(draft);
+      blocks = buildIndustryBlocks({ ...draft, image: imageData });
     }
 
     const pageResult = await pool.query(

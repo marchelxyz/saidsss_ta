@@ -39,6 +39,7 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
 
   const sortedBlocks = useMemo(
     () => [...blocks].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
@@ -74,6 +75,29 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
       return updated.map((block, idx) => ({ ...block, sort_order: idx }));
     });
     setDragIndex(null);
+  };
+
+  const generateImageForBlock = async (index: number) => {
+    const prompt = (blocks[index]?.content?.image_prompt as string | undefined) ?? "";
+    if (!prompt.trim()) return;
+    setGeneratingIndex(index);
+    try {
+      const response = await fetch("/api/admin/images/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as {
+        urls?: { avif?: string; webp?: string; jpg?: string };
+      };
+      if (!data.urls) return;
+      updateBlockContent(index, "image_avif_url", data.urls.avif ?? "");
+      updateBlockContent(index, "image_webp_url", data.urls.webp ?? "");
+      updateBlockContent(index, "image_url", data.urls.jpg ?? "");
+    } finally {
+      setGeneratingIndex((current) => (current === index ? null : current));
+    }
   };
 
   const save = async () => {
@@ -338,10 +362,48 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                         }
                         placeholder="https://..."
                       />
+                      <label className="builder-label">Промпт для генерации</label>
+                      <textarea
+                        className="builder-input"
+                        value={block.content.image_prompt ?? ""}
+                        onChange={(event) =>
+                          updateBlockContent(index, "image_prompt", event.target.value)
+                        }
+                        placeholder="Например: инфографика, процесс, темный фон..."
+                      />
+                      <button
+                        className="btn btn-secondary builder-inline-button"
+                        type="button"
+                        onClick={() => generateImageForBlock(index)}
+                        disabled={generatingIndex === index}
+                      >
+                        {generatingIndex === index ? "Генерируем..." : "Сгенерировать"}
+                      </button>
                     </div>
-                    {block.content.image_url && (
+                    {(block.content.image_avif_url ||
+                      block.content.image_webp_url ||
+                      block.content.image_url) && (
                       <div className="card" style={cardStyle}>
-                        <img src={block.content.image_url} alt={block.content.title ?? "image"} />
+                        <picture>
+                          {block.content.image_avif_url && (
+                            <source
+                              srcSet={block.content.image_avif_url}
+                              type="image/avif"
+                            />
+                          )}
+                          {block.content.image_webp_url && (
+                            <source
+                              srcSet={block.content.image_webp_url}
+                              type="image/webp"
+                            />
+                          )}
+                          {block.content.image_url && (
+                            <img
+                              src={block.content.image_url}
+                              alt={block.content.title ?? "image"}
+                            />
+                          )}
+                        </picture>
                       </div>
                     )}
                   </div>
