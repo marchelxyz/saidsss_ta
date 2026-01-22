@@ -179,12 +179,15 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
             <section
               key={`${block.block_type}-${index}`}
               className={`builder-block ${dragIndex === index ? "is-dragging" : ""}`}
-              draggable
-              onDragStart={() => setDragIndex(index)}
               onDragOver={(event) => event.preventDefault()}
               onDrop={() => handleDrop(index)}
             >
-              <div className="builder-handle" title="Перетащить">
+              <div
+                className="builder-handle"
+                title="Перетащить"
+                draggable
+                onDragStart={() => setDragIndex(index)}
+              >
                 ⋮⋮
               </div>
 

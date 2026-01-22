@@ -300,12 +300,18 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
           <div
             key={`${block.block_type}-${index}`}
             className="admin-block"
-            draggable
-            onDragStart={() => setDragIndex(index)}
             onDragOver={(event) => event.preventDefault()}
             onDrop={() => handleDrop(index)}
           >
             <div className="admin-block-header">
+              <span
+                className="admin-drag-handle"
+                draggable
+                onDragStart={() => setDragIndex(index)}
+                title="Перетащить блок"
+              >
+                ⋮⋮
+              </span>
               <strong>{BLOCK_TYPES.find((item) => item.value === block.block_type)?.label}</strong>
               <button
                 className="btn btn-secondary"
