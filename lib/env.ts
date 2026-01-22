@@ -56,3 +56,17 @@ export function getScreenshotConfig() {
   const timeoutMs = Number(process.env.SCREENSHOT_TIMEOUT_MS ?? 30000);
   return { enabled, apiKey, provider, timeoutMs };
 }
+
+export function getSearchConfig() {
+  const provider = (process.env.SEARCH_PROVIDER ?? "tavily_api") as
+    | "tavily_api"
+    | "tavily_mcp";
+  const apiKey = process.env.TAVILY_API_KEY ?? "";
+  const apiBase = process.env.TAVILY_API_BASE ?? "https://api.tavily.com";
+  const searchDepth = (process.env.TAVILY_SEARCH_DEPTH ?? "basic") as
+    | "basic"
+    | "advanced";
+  const maxResults = Number(process.env.TAVILY_MAX_RESULTS ?? 5);
+  const mcpEndpoint = process.env.TAVILY_MCP_ENDPOINT ?? "";
+  return { provider, apiKey, apiBase, searchDepth, maxResults, mcpEndpoint };
+}
