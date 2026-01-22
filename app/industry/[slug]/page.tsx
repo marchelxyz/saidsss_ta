@@ -46,10 +46,14 @@ export default async function IndustryPage({ params }: PageParams) {
   const navItems = blocksResult.rows
     .filter((block) => block.block_type !== "hero" && block.block_type !== "contact")
     .map((block) => ({
-      title: (block.content?.title as string | undefined) ?? "",
+      title:
+        (block.content?.short_title as string | undefined) ||
+        (block.content?.title as string | undefined) ||
+        "",
       id: slugify((block.content?.title as string | undefined) ?? "")
     }))
-    .filter((item) => item.title && item.id);
+    .filter((item) => item.title && item.id)
+    .slice(0, 6);
 
   return (
     <>

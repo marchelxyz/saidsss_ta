@@ -107,19 +107,37 @@ export async function draftArticle(input: ArticleDraftRequest) {
 }
 
 export type IndustryPageDraft = {
-  title: string;
-  subheadline: string;
-  pain_points: string[];
-  solution: string;
-  metrics: string[];
+  hero: {
+    title: string;
+    subtitle: string;
+  };
+  pain_points: Array<{
+    title: string;
+    description: string;
+    loss_amount: string;
+  }>;
+  process_breakdown: {
+    old_way: string[];
+    new_way_ai: string[];
+  };
+  roi_calculator: {
+    hours_saved_per_month: number;
+    money_saved_per_year: number;
+    roi_percentage: number;
+    payback_period_months: number;
+  };
+  software_stack: string[];
+  comparison_table: Array<{
+    feature: string;
+    human: string;
+    ai: string;
+  }>;
+  case_study: {
+    title: string;
+    story: string;
+    result_bullet_points: string[];
+  };
   meta_description: string;
-  automation_example: string;
-  why_it_works: string;
-  value_props: string[];
-  process_steps: string[];
-  faq: string[];
-  deliverables: string[];
-  risks: string[];
 };
 
 export async function draftIndustryPage(niche: string) {
@@ -127,11 +145,11 @@ export async function draftIndustryPage(niche: string) {
     {
       role: "system",
       content:
-        "Ты ведущий B2B-маркетолог и бизнес-аналитик TeleAgent. Пиши конкретно, жестко, без воды, упор на деньги, ROI и аудит. Верни ТОЛЬКО валидный JSON с полями: title, subheadline, pain_points, solution, metrics, meta_description, automation_example, why_it_works, value_props, process_steps, faq, deliverables, risks. Запрещены клише и общие фразы."
+        "Ты старший бизнес-консультант Big4 (McKinsey/BCG) по операционной эффективности. Пиши жестко и конкретно, с цифрами и профессиональным жаргоном ниши. Ненавидишь общие слова и клише. Твоя цель — показать владельцу бизнеса, сколько денег он теряет, и почему аудит TeleAgent окупится. Верни ТОЛЬКО валидный JSON по строгой схеме."
     },
     {
       role: "user",
-      content: `Ниша: ${niche}.\n\nСформируй насыщенный лендинг. Нужны конкретные боли, решения, цифры и результат.\n- title: продающий заголовок H1 с нишей\n- subheadline: подзаголовок с выгодой и обещанием эффекта\n- pain_points: массив из 5 строк, реальные боли ниши\n- solution: 3-5 предложений, как TeleAgent решает\n- metrics: массив из 4 строк, конкретные метрики/эффект\n- meta_description: до 160 символов\n- automation_example: индивидуальный кейс автоматизации под нишу (2-4 предложения)\n- why_it_works: почему это работает именно в этой нише (2-3 предложения)\n- value_props: массив из 5 строк, преимущества для бизнеса\n- process_steps: массив из 4 строк, этапы (Аудит -> Карта -> Внедрение -> Обучение)\n- faq: массив из 4 строк, вопросы/ответы в формате \"В: ... — О: ...\"\n- deliverables: массив из 4 строк, что получит клиент\n- risks: массив из 3 строк, что теряет бизнес без внедрения\n\nОтветь ТОЛЬКО валидным JSON объектом.`
+      content: `Ниша: ${niche}.\n\nСгенерируй насыщенный лендинг с данными для инфографики. Обязательно используй сленг ниши и названия ПО (1C, amoCRM, Bitrix24, YCLIENTS, iiko — если релевантно).\nСхема JSON:\n{\n  \"hero\": {\"title\": \"Жесткий заголовок с цифрой\", \"subtitle\": \"Оффер с конкретным обещанием\"},\n  \"pain_points\": [\n    {\"title\": \"Название боли\", \"description\": \"Детальная ситуация\", \"loss_amount\": \"Потеря: 50 000₽/мес\"}\n  ],\n  \"process_breakdown\": {\"old_way\": [\"...\"], \"new_way_ai\": [\"...\"]},\n  \"roi_calculator\": {\"hours_saved_per_month\": 120, \"money_saved_per_year\": 720000, \"roi_percentage\": 450, \"payback_period_months\": 1.5},\n  \"software_stack\": [\"...\"],\n  \"comparison_table\": [\n    {\"feature\": \"Скорость ответа\", \"human\": \"5-20 минут\", \"ai\": \"2 секунды\"}\n  ],\n  \"case_study\": {\"title\": \"Реальный сценарий\", \"story\": \"Короткая история\", \"result_bullet_points\": [\"...\"]},\n  \"meta_description\": \"до 160 символов\"\n}\n\nТребования:\n- pain_points: 5 пунктов.\n- old_way/new_way_ai: по 4-6 шагов.\n- software_stack: 6-8 инструментов, релевантных нише.\n- comparison_table: 4-5 строк.\n- case_study.result_bullet_points: 3-4 пункта.\n- Только валидный JSON, без Markdown.`
     }
   ]);
 
