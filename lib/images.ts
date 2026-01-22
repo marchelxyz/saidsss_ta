@@ -14,6 +14,7 @@ async function generateWithGemini(prompt: string): Promise<GeneratedImage> {
     throw new Error("IMAGE_API_KEY is not set");
   }
 
+  console.log(`[images] gemini request model=${model}`);
   const response = await fetch(
     `${apiBase}/models/${model}:generateContent?key=${apiKey}`,
     {
@@ -30,6 +31,7 @@ async function generateWithGemini(prompt: string): Promise<GeneratedImage> {
 
   if (!response.ok) {
     const text = await response.text();
+    console.log(`[images] gemini error status=${response.status} body=${text}`);
     throw new Error(text || "Gemini image generation failed");
   }
 
@@ -44,6 +46,10 @@ async function generateWithGemini(prompt: string): Promise<GeneratedImage> {
   )?.inlineData;
 
   if (!inline?.data) {
+    console.log("[images] gemini response missing inlineData", {
+      hasCandidates: Boolean(data.candidates?.length),
+      parts: data.candidates?.[0]?.content?.parts?.length ?? 0
+    });
     throw new Error("Gemini response has no image data");
   }
 
