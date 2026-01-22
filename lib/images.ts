@@ -19,17 +19,18 @@ async function generateWithGeminiModel(
 
   const normalizedModel = model.startsWith("models/") ? model : `models/${model}`;
   const safePrompt = typeof prompt === "string" ? prompt : JSON.stringify(prompt);
-  console.log(`[images] gemini request model=${normalizedModel} endpoint=generateImages`);
+  console.log(`[images] gemini request model=${normalizedModel} endpoint=generateContent`);
   const response = await fetch(
-    `${apiBase}/${normalizedModel}:generateImages?key=${apiKey}`,
+    `${apiBase}/${normalizedModel}:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        prompt: { text: safePrompt },
-        imageGenerationConfig: {
-          outputMimeType: "image/png"
-        }
+        contents: [
+          {
+            parts: [{ text: safePrompt }]
+          }
+        ]
       })
     }
   );
@@ -41,20 +42,31 @@ async function generateWithGeminiModel(
   }
 
   const data = (await response.json()) as {
-    generatedImages?: Array<{ bytesBase64Encoded?: string; mimeType?: string }>;
+    candidates?: Array<{
+      content?: {
+        parts?: Array<{
+          inlineData?: { data?: string; mimeType?: string };
+          inline_data?: { data?: string; mimeType?: string };
+          text?: string;
+        }>;
+      };
+    }>;
   };
 
-  const image = data.generatedImages?.[0];
-  if (!image?.bytesBase64Encoded) {
-    console.log("[images] gemini response missing generatedImages", {
-      hasImages: Boolean(data.generatedImages?.length)
+  const parts = data.candidates?.[0]?.content?.parts ?? [];
+  const imagePart = parts.find((part) => part.inlineData?.data || part.inline_data?.data);
+  const inlineData = imagePart?.inlineData ?? imagePart?.inline_data;
+  if (!inlineData?.data) {
+    console.log("[images] gemini response missing inlineData", {
+      hasCandidates: Boolean(data.candidates?.length),
+      partsCount: parts.length
     });
     throw new Error("Gemini response has no image data");
   }
 
   return {
-    buffer: Buffer.from(image.bytesBase64Encoded, "base64"),
-    contentType: image.mimeType ?? "image/png"
+    buffer: Buffer.from(inlineData.data, "base64"),
+    contentType: inlineData.mimeType ?? "image/png"
   };
 }
 
