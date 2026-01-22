@@ -8,6 +8,7 @@ import { generateImage, uploadImageVariants, uploadScreenshotVariants } from "@/
 import { captureScreenshot } from "@/lib/screenshot";
 import { getPublicBaseUrl, getScreenshotConfig } from "@/lib/env";
 import { logAudit } from "@/lib/audit";
+import { searchWeb } from "@/lib/search";
 import { getNicheForms } from "@/lib/niche";
 
 type PageCreatePayload = {
@@ -472,7 +473,10 @@ async function processIndustryPageGeneration(params: {
     const caseRows = await fetchPublishedCases(client, niche);
     const draft = await generateIndustryPageMAS(niche);
     logPageStep(requestId, "generate.industry.draft_ready", summarizeIndustryDraft(draft));
-    const caseStudyOverride = buildCaseStudyFromCases(caseRows, niche);
+    let caseStudyOverride = buildCaseStudyFromCases(caseRows, niche);
+    if (!caseStudyOverride) {
+      caseStudyOverride = await buildCaseStudyFromSearch({ requestId, niche });
+    }
     const imageData = await buildImageData({
       requestId,
       niche,
@@ -733,4 +737,120 @@ function isGenericCaseCompany(value: string): boolean {
     return normalized.split(/\s+/).length <= 2;
   }
   return false;
+}
+
+async function buildCaseStudyFromSearch(params: {
+  requestId: string;
+  niche: string;
+}): Promise<{
+  title: string;
+  company: string;
+  source_url?: string;
+  is_public: boolean;
+  story: string;
+  result_bullet_points: string[];
+} | null> {
+  const { requestId, niche } = params;
+  const query = `кейс ${niche} компания результаты`;
+  try {
+    logPageStep(requestId, "case.search.start", { query });
+    const response = await searchWeb(query, { searchDepth: "advanced", maxResults: 6 });
+    const candidate = pickSearchCase(response.results);
+    if (!candidate) {
+      logPageStep(requestId, "case.search.empty");
+      return null;
+    }
+    logPageStep(requestId, "case.search.matched", {
+      title: candidate.title,
+      url: candidate.url
+    });
+    return {
+      title: candidate.title,
+      company: candidate.company,
+      source_url: candidate.url,
+      is_public: true,
+      story: candidate.story,
+      result_bullet_points: candidate.resultBullets
+    };
+  } catch (error) {
+    logPageError(requestId, "case.search.failed", error);
+    return null;
+  }
+}
+
+function pickSearchCase(results: Array<{
+  title: string;
+  url: string;
+  content?: string;
+}>): {
+  title: string;
+  url: string;
+  company: string;
+  story: string;
+  resultBullets: string[];
+} | null {
+  const candidates = results
+    .map((result) => ({
+      ...result,
+      company: extractCompanyFromTitle(result.title)
+    }))
+    .filter(
+      (result) =>
+        Boolean(result.url) &&
+        Boolean(result.company) &&
+        !isGenericCaseCompany(result.company ?? "")
+    );
+
+  for (const result of candidates) {
+    const story = buildStoryFromSnippet(result.content, result.title);
+    if (!story) continue;
+    const bullets = extractBullets(result.content);
+    if (bullets.length < 2) continue;
+    return {
+      title: result.title,
+      url: result.url,
+      company: result.company as string,
+      story,
+      resultBullets: bullets
+    };
+  }
+
+  return null;
+}
+
+function extractCompanyFromTitle(title: string): string | null {
+  const cleaned = title.replace(/["«»]/g, "").trim();
+  if (!cleaned) return null;
+  const segment = cleaned.split(/ — | \| | - /)[0]?.trim() ?? "";
+  if (!segment || segment.length < 3) return null;
+  if (/кейс|история|пример/i.test(segment)) return null;
+  return segment;
+}
+
+function buildStoryFromSnippet(content: string | undefined, title: string): string | null {
+  const snippet = (content ?? "").trim();
+  if (snippet.length < 160) return null;
+  const sentences = snippet
+    .split(/(?<=[.!?])\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const selected = sentences.slice(0, 3).join(" ");
+  if (selected.length < 160) return null;
+  return `${title}. ${selected}`;
+}
+
+function extractBullets(content: string | undefined): string[] {
+  const snippet = (content ?? "").trim();
+  if (!snippet) return [];
+  const percentMatches = Array.from(snippet.matchAll(/\b\d{1,3}%/g)).map(
+    (match) => match[0]
+  );
+  if (percentMatches.length >= 2) {
+    return percentMatches.slice(0, 3).map((value) => `Изменение показателя: ${value}`);
+  }
+  const sentences = snippet
+    .split(/(?<=[.!?])\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return sentences.slice(0, 3).map((item) => item.replace(/\.$/, ""));
 }
