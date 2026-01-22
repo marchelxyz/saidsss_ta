@@ -6,6 +6,7 @@ import { generateImage, uploadImageVariants, uploadScreenshotVariants } from "@/
 import { captureScreenshot } from "@/lib/screenshot";
 import { getPublicBaseUrl, getScreenshotConfig } from "@/lib/env";
 import { logAudit } from "@/lib/audit";
+import { getNicheForms } from "@/lib/niche";
 
 type PageCreatePayload = {
   title?: string;
@@ -185,7 +186,10 @@ export async function POST(request: Request) {
 
   const pageType = body?.pageType?.trim() || "custom";
   const niche = body?.niche?.trim() || "";
-  const title = body?.title?.trim() || (niche ? `TeleAgent для ${niche}` : "Новая страница");
+  const nicheForms = getNicheForms(niche);
+  const title =
+    body?.title?.trim() ||
+    (nicheForms.genitive ? `TeleAgent для ${nicheForms.genitive}` : "Новая страница");
   const slug =
     pageType === "home"
       ? "home"
