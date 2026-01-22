@@ -14,7 +14,11 @@ type PageSpeedResponse = {
 export async function captureScreenshot(url: string) {
   const { apiKey, provider, timeoutMs } = getScreenshotConfig();
   if (provider === "pagespeed") {
-    return captureWithPageSpeed(url, apiKey);
+    try {
+      return await captureWithPageSpeed(url, apiKey);
+    } catch {
+      return null;
+    }
   }
   try {
     return await captureWithPuppeteer(url, timeoutMs);
