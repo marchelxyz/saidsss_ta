@@ -14,9 +14,10 @@ async function generateWithGemini(prompt: string): Promise<GeneratedImage> {
     throw new Error("IMAGE_API_KEY is not set");
   }
 
-  console.log(`[images] gemini request model=${model}`);
+  const normalizedModel = model.startsWith("models/") ? model : `models/${model}`;
+  console.log(`[images] gemini request model=${normalizedModel}`);
   const response = await fetch(
-    `${apiBase}/models/${model}:generateContent?key=${apiKey}`,
+    `${apiBase}/${normalizedModel}:generateContent?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
