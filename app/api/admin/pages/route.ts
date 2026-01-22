@@ -224,8 +224,8 @@ export async function POST(request: Request) {
           jpgUrl: uploaded.jpgUrl
         };
         console.log("[pages] image uploaded");
-      } catch {
-        console.log("[pages] image generation failed");
+      } catch (error) {
+        console.log("[pages] image generation failed", error);
         imageData = undefined;
       }
       pageTitle = draft.hero.title;
