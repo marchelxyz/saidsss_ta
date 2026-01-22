@@ -52,5 +52,7 @@ export function getPublicBaseUrl() {
 export function getScreenshotConfig() {
   const enabled = process.env.SCREENSHOT_ENABLED === "true";
   const apiKey = process.env.SCREENSHOT_API_KEY ?? "";
-  return { enabled, apiKey };
+  const provider = process.env.SCREENSHOT_PROVIDER ?? "local";
+  const timeoutMs = Number(process.env.SCREENSHOT_TIMEOUT_MS ?? 30000);
+  return { enabled, apiKey, provider, timeoutMs };
 }

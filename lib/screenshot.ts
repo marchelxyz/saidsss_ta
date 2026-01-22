@@ -1,4 +1,5 @@
 import { getScreenshotConfig } from "./env";
+import puppeteer from "puppeteer";
 
 type PageSpeedResponse = {
   lighthouseResult?: {
@@ -11,7 +12,18 @@ type PageSpeedResponse = {
 };
 
 export async function captureScreenshot(url: string) {
-  const { apiKey } = getScreenshotConfig();
+  const { apiKey, provider, timeoutMs } = getScreenshotConfig();
+  if (provider === "pagespeed") {
+    return captureWithPageSpeed(url, apiKey);
+  }
+  try {
+    return await captureWithPuppeteer(url, timeoutMs);
+  } catch {
+    return null;
+  }
+}
+
+async function captureWithPageSpeed(url: string, apiKey: string) {
   const apiUrl = new URL("https://www.googleapis.com/pagespeedonline/v5/runPagespeed");
   apiUrl.searchParams.set("url", url);
   apiUrl.searchParams.set("screenshot", "true");
@@ -35,4 +47,22 @@ export async function captureScreenshot(url: string) {
 
   const base64 = screenshotData.replace(/^data:image\/\w+;base64,/, "");
   return Buffer.from(base64, "base64");
+}
+
+async function captureWithPuppeteer(url: string, timeoutMs: number) {
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"]
+  });
+
+  try {
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
+    await page.goto(url, { waitUntil: "networkidle2", timeout: timeoutMs });
+    await page.waitForTimeout(750);
+    const buffer = (await page.screenshot({ type: "png" })) as Buffer;
+    return buffer;
+  } finally {
+    await browser.close();
+  }
 }
