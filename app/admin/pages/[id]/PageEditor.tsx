@@ -107,6 +107,7 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [newBlockType, setNewBlockType] = useState("text");
   const [isSaving, setIsSaving] = useState(false);
+  const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
 
   const updateBlock = (index: number, patch: Partial<BlockData>) => {
     setBlocks((prev) =>
@@ -154,6 +155,29 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
       return updated.map((block, idx) => ({ ...block, sort_order: idx }));
     });
     setDragIndex(null);
+  };
+
+  const generateImageForBlock = async (index: number) => {
+    const prompt = (blocks[index]?.content?.image_prompt as string | undefined) ?? "";
+    if (!prompt.trim()) return;
+    setGeneratingIndex(index);
+    try {
+      const response = await fetch("/api/admin/images/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
+      });
+      if (!response.ok) return;
+      const data = (await response.json()) as {
+        urls?: { avif?: string; webp?: string; jpg?: string };
+      };
+      if (!data.urls) return;
+      updateBlockContent(index, "image_avif_url", data.urls.avif ?? "");
+      updateBlockContent(index, "image_webp_url", data.urls.webp ?? "");
+      updateBlockContent(index, "image_url", data.urls.jpg ?? "");
+    } finally {
+      setGeneratingIndex((current) => (current === index ? null : current));
+    }
   };
 
   const save = async () => {
@@ -371,6 +395,22 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
                     value={block.content.image_url ?? ""}
                     onChange={(event) => updateBlockContent(index, "image_url", event.target.value)}
                   />
+                  <label>Промпт для генерации</label>
+                  <textarea
+                    value={block.content.image_prompt ?? ""}
+                    onChange={(event) =>
+                      updateBlockContent(index, "image_prompt", event.target.value)
+                    }
+                    placeholder="Например: инфографика, процесс, темный фон..."
+                  />
+                  <button
+                    className="btn btn-secondary"
+                    type="button"
+                    onClick={() => generateImageForBlock(index)}
+                    disabled={generatingIndex === index}
+                  >
+                    {generatingIndex === index ? "Генерируем..." : "Перегенерировать"}
+                  </button>
                 </>
               )}
 
