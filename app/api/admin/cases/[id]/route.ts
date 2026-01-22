@@ -11,7 +11,7 @@ export async function GET(request: Request, context: { params: { id: string } })
 
   const pool = getPool();
   const result = await pool.query(
-    `select id, title, slug, industry, challenge, solution, result, metrics, cover_url, published
+    `select id, title, slug, company_name, provider_name, source_url, country, industry, challenge, solution, result, metrics, cover_url, published
      from cases where id = $1`,
     [context.params.id]
   );
@@ -31,6 +31,10 @@ export async function PATCH(request: Request, context: { params: { id: string } 
   const body = (await request.json().catch(() => ({}))) as {
     title?: string;
     slug?: string;
+    company_name?: string | null;
+    provider_name?: string | null;
+    source_url?: string | null;
+    country?: string | null;
     industry?: string | null;
     challenge?: string | null;
     solution?: string | null;
@@ -62,6 +66,10 @@ export async function PATCH(request: Request, context: { params: { id: string } 
   }
 
   const optionalFields: Array<[string, string | null | undefined]> = [
+    ["company_name", body.company_name],
+    ["provider_name", body.provider_name],
+    ["source_url", body.source_url],
+    ["country", body.country],
     ["industry", body.industry],
     ["challenge", body.challenge],
     ["solution", body.solution],

@@ -244,9 +244,13 @@ export default function SiteBlocks({ blocks, sourcePage }: SiteBlocksProps) {
               <div className="container">
                 <h2 className="section-title">{block.content.title}</h2>
                 <div className="card" style={cardStyle}>
-                  {(block.content.company || block.content.source_url) && (
+                  {(block.content.company || block.content.source_url || block.content.provider || block.content.country) && (
                     <p className="case-meta">
                       {block.content.company && <strong>{block.content.company}</strong>}
+                      {block.content.provider && (
+                        <span> · Партнер: {block.content.provider}</span>
+                      )}
+                      {block.content.country && <span> · {block.content.country}</span>}
                       {block.content.source_url && (
                         <a href={block.content.source_url} target="_blank" rel="noreferrer">
                           Источник

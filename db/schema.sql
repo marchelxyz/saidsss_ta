@@ -41,6 +41,10 @@ create table if not exists cases (
   id uuid primary key default gen_random_uuid(),
   title text not null,
   slug text unique not null,
+  company_name text,
+  provider_name text,
+  source_url text,
+  country text,
   industry text,
   challenge text,
   solution text,
@@ -51,6 +55,15 @@ create table if not exists cases (
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+alter table cases
+  add column if not exists company_name text;
+alter table cases
+  add column if not exists provider_name text;
+alter table cases
+  add column if not exists source_url text;
+alter table cases
+  add column if not exists country text;
 
 create table if not exists lead_tags (
   id uuid primary key default gen_random_uuid(),
