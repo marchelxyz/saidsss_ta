@@ -1,4 +1,5 @@
 import { getAiConfig } from "./env";
+import { randomUUID } from "crypto";
 
 export type LeadForAnalysis = {
   name: string;
@@ -23,6 +24,13 @@ async function callAi(messages: Array<{ role: string; content: string }>) {
   if (!apiKey) {
     throw new Error("AI_API_KEY is not set");
   }
+  const requestId = randomUUID();
+  const startedAt = Date.now();
+  logAiStep(requestId, "request.start", {
+    model,
+    apiBase,
+    messagesCount: messages.length
+  });
 
   const response = await fetch(`${apiBase}/chat/completions`, {
     method: "POST",
@@ -40,6 +48,10 @@ async function callAi(messages: Array<{ role: string; content: string }>) {
 
   if (!response.ok) {
     const text = await response.text();
+    logAiError(requestId, "request.failed", {
+      status: response.status,
+      body: text
+    });
     throw new Error(text || "AI request failed");
   }
 
@@ -48,7 +60,17 @@ async function callAi(messages: Array<{ role: string; content: string }>) {
   };
 
   const content = data.choices?.[0]?.message?.content ?? "{}";
-  return JSON.parse(content) as Record<string, unknown>;
+  try {
+    const parsed = JSON.parse(content) as Record<string, unknown>;
+    logAiStep(requestId, "request.success", { durationMs: Date.now() - startedAt });
+    return parsed;
+  } catch (error) {
+    logAiError(requestId, "response.parse_failed", {
+      durationMs: Date.now() - startedAt,
+      contentSnippet: content.slice(0, 2000)
+    });
+    throw error;
+  }
 }
 
 export async function analyzeLead(lead: LeadForAnalysis) {
@@ -148,10 +170,13 @@ export type IndustryPageDraft = {
 type AgentResult = Record<string, unknown>;
 
 async function runAgent(name: string, system: string, input: Record<string, unknown>) {
+  const startedAt = Date.now();
+  logAiStep("mas", "agent.start", { name });
   const result = await callAi([
     { role: "system", content: system },
     { role: "user", content: JSON.stringify({ agent: name, ...input }, null, 2) }
   ]);
+  logAiStep("mas", "agent.done", { name, durationMs: Date.now() - startedAt });
   return result as AgentResult;
 }
 
@@ -257,11 +282,11 @@ export async function generateIndustryPageMAS(niche: string) {
   };
 
   const result: IndustryPageDraft = {
-    hero: uiQa.hero as IndustryPageDraft["hero"],
+    hero: normalizeHero(uiQa.hero, niche),
     pain_points: normalizePainPoints(
       auditor.pain_points as IndustryPageDraft["pain_points"]
     ),
-    process_breakdown: uiQa.process_breakdown as IndustryPageDraft["process_breakdown"],
+    process_breakdown: normalizeProcessBreakdown(uiQa.process_breakdown),
     roi_calculator: {
       hours_saved_per_month: Math.max(
         10,
@@ -279,13 +304,100 @@ export async function generateIndustryPageMAS(niche: string) {
         Number((auditor.roi_calculator as any)?.payback_period_months ?? 2)
       )
     },
-    software_stack: (uiQa.software_stack as string[]) ?? [],
-    comparison_table: (uiQa.comparison_table as IndustryPageDraft["comparison_table"]) ?? [],
-    case_study: uiQa.case_study as IndustryPageDraft["case_study"],
-    meta_description: (growth.meta_description as string) ?? "",
-    image_prompt: (artDirector.image_prompt as string) ?? ""
+    software_stack: normalizeStringList(uiQa.software_stack),
+    comparison_table: normalizeComparison(uiQa.comparison_table),
+    case_study: normalizeCaseStudy(uiQa.case_study, niche),
+    meta_description: String((growth.meta_description as string) ?? "").trim(),
+    image_prompt: String((artDirector.image_prompt as string) ?? "").trim()
   };
 
   log(`finish in ${Date.now() - startedAt}ms`);
   return result;
+}
+
+function logAiStep(requestId: string, step: string, meta?: Record<string, unknown>) {
+  const prefix = `[ai] [${requestId}] ${step}`;
+  if (!meta) {
+    console.log(prefix);
+    return;
+  }
+  console.log(prefix, meta);
+}
+
+function logAiError(
+  requestId: string,
+  step: string,
+  meta: Record<string, unknown>
+) {
+  console.error(`[ai] [${requestId}] ${step}`, meta);
+}
+
+function normalizeHero(hero: unknown, niche: string): IndustryPageDraft["hero"] {
+  const fallback = {
+    title: `TeleAgent для ${niche}`,
+    subtitle: "Автоматизируем процессы и убираем потери в отделах."
+  };
+  if (!hero || typeof hero !== "object") return fallback;
+  const candidate = hero as IndustryPageDraft["hero"];
+  return {
+    title: candidate.title?.trim() || fallback.title,
+    subtitle: candidate.subtitle?.trim() || fallback.subtitle
+  };
+}
+
+function normalizeProcessBreakdown(
+  input: unknown
+): IndustryPageDraft["process_breakdown"] {
+  const fallback = {
+    old_way: ["Ручные согласования", "Распыление ответственности", "Срывы сроков"],
+    new_way_ai: ["Единый контроль", "Прозрачные метрики", "Автоматические проверки"]
+  };
+  if (!input || typeof input !== "object") return fallback;
+  const candidate = input as IndustryPageDraft["process_breakdown"];
+  const oldWay = Array.isArray(candidate.old_way) ? candidate.old_way : [];
+  const newWay = Array.isArray(candidate.new_way_ai) ? candidate.new_way_ai : [];
+  return {
+    old_way: oldWay.length > 0 ? oldWay : fallback.old_way,
+    new_way_ai: newWay.length > 0 ? newWay : fallback.new_way_ai
+  };
+}
+
+function normalizeStringList(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+  return input.filter((item) => typeof item === "string" && item.trim().length > 0);
+}
+
+function normalizeComparison(
+  input: unknown
+): IndustryPageDraft["comparison_table"] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((item) => item as IndustryPageDraft["comparison_table"][number])
+    .filter((item) => Boolean(item?.feature));
+}
+
+function normalizeCaseStudy(
+  input: unknown,
+  niche: string
+): IndustryPageDraft["case_study"] {
+  const fallback: IndustryPageDraft["case_study"] = {
+    title: `Кейс: ${niche}`,
+    company: "Компания из ниши",
+    is_public: false,
+    story: "До внедрения — разрозненные процессы, после — единые стандарты и контроль.",
+    result_bullet_points: ["Снижение потерь", "Рост прозрачности", "Ускорение цикла"]
+  };
+  if (!input || typeof input !== "object") return fallback;
+  const candidate = input as IndustryPageDraft["case_study"];
+  return {
+    title: candidate.title?.trim() || fallback.title,
+    company: candidate.company?.trim() || fallback.company,
+    source_url: candidate.source_url,
+    is_public: Boolean(candidate.is_public),
+    story: candidate.story?.trim() || fallback.story,
+    result_bullet_points:
+      Array.isArray(candidate.result_bullet_points) && candidate.result_bullet_points.length > 0
+        ? candidate.result_bullet_points
+        : fallback.result_bullet_points
+  };
 }
