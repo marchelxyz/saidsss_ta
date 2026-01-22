@@ -10,6 +10,8 @@ type PageRow = {
   page_type: string;
   niche: string | null;
   meta_description: string | null;
+  generation_status?: string | null;
+  generation_error?: string | null;
   published: boolean;
   leads_count: number;
   public_url?: string | null;
@@ -201,7 +203,15 @@ export default function PageManager({ initialPages }: PageManagerProps) {
                   </a>
                 </td>
                 <td>{page.leads_count ?? 0}</td>
-                <td>{page.published ? "Опубликовано" : "Черновик"}</td>
+                <td>
+                  <div>{page.published ? "Опубликовано" : "Черновик"}</div>
+                  {page.generation_status && page.generation_status !== "ready" && (
+                    <div className="admin-hint">
+                      Генерация: {page.generation_status}
+                      {page.generation_error ? ` — ${page.generation_error}` : ""}
+                    </div>
+                  )}
+                </td>
                 <td>
                   <div className="admin-actions">
                     <Link href={`/admin/pages/${page.id}`}>Редактировать</Link>

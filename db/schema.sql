@@ -132,6 +132,10 @@ create table if not exists site_pages (
   screenshot_avif_url text,
   screenshot_webp_url text,
   screenshot_jpg_url text,
+  generation_status text default 'ready',
+  generation_error text,
+  generation_started_at timestamptz,
+  generation_finished_at timestamptz,
   published boolean default true,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -143,6 +147,14 @@ alter table site_pages
   add column if not exists screenshot_webp_url text;
 alter table site_pages
   add column if not exists screenshot_jpg_url text;
+alter table site_pages
+  add column if not exists generation_status text default 'ready';
+alter table site_pages
+  add column if not exists generation_error text;
+alter table site_pages
+  add column if not exists generation_started_at timestamptz;
+alter table site_pages
+  add column if not exists generation_finished_at timestamptz;
 
 create table if not exists site_blocks (
   id uuid primary key default gen_random_uuid(),
