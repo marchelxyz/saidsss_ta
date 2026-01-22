@@ -6,6 +6,7 @@ import { slugify } from "@/lib/slug";
 import {
   generateCaseSearchTags,
   generateIndustryPageMAS,
+  refineCaseSearchQuery,
   refineCaseSearchResult
 } from "@/lib/ai";
 import { generateImage, uploadImageVariants, uploadScreenshotVariants } from "@/lib/images";
@@ -755,33 +756,50 @@ async function buildCaseStudyFromSearch(params: {
   result_bullet_points: string[];
 } | null> {
   const { requestId, niche } = params;
-  const tags = await generateCaseSearchTags(niche).catch(() => []);
-  const query = buildSearchQuery(niche, tags);
+  let tags = await generateCaseSearchTags(niche).catch(() => []);
+  let query = buildSearchQuery(niche, tags);
   try {
-    logPageStep(requestId, "case.search.start", { query });
-    const response = await searchWeb(query, { searchDepth: "advanced", maxResults: 8 });
-    const candidate = pickSearchCase(response.results);
-    if (!candidate) {
-      logPageStep(requestId, "case.search.empty");
-      return null;
+    let attempt = 0;
+    let lastReason = "";
+    while (attempt < 2) {
+      logPageStep(requestId, "case.search.start", { query, attempt: attempt + 1 });
+      const response = await searchWeb(query, { searchDepth: "advanced", maxResults: 8 });
+      const candidate = pickSearchCase(response.results);
+      if (!candidate) {
+        logPageStep(requestId, "case.search.empty", { attempt: attempt + 1 });
+        lastReason = "candidate_not_found";
+      } else {
+        logPageStep(requestId, "case.search.matched", {
+          title: candidate.title,
+          url: candidate.url
+        });
+        const refined = await refineCaseSearchResult(niche, candidate);
+        if (refined.approved) {
+          return {
+            title: refined.title ?? candidate.title,
+            company: refined.company ?? candidate.company,
+            source_url: refined.source_url ?? candidate.url,
+            is_public: true,
+            story: refined.story ?? candidate.story,
+            result_bullet_points: refined.result_bullet_points ?? candidate.resultBullets
+          };
+        }
+        lastReason = refined.reason ?? "not_approved";
+        logPageStep(requestId, "case.search.rejected", { reason: lastReason });
+      }
+
+      const refinedQuery = await refineCaseSearchQuery({
+        niche,
+        previousQuery: query,
+        previousTags: tags,
+        rejectionReason: lastReason
+      }).catch(() => null);
+      if (!refinedQuery) break;
+      query = refinedQuery.query;
+      tags = refinedQuery.tags;
+      attempt += 1;
     }
-    logPageStep(requestId, "case.search.matched", {
-      title: candidate.title,
-      url: candidate.url
-    });
-    const refined = await refineCaseSearchResult(niche, candidate);
-    if (!refined.approved) {
-      logPageStep(requestId, "case.search.rejected", { reason: refined.reason });
-      return null;
-    }
-    return {
-      title: refined.title ?? candidate.title,
-      company: refined.company ?? candidate.company,
-      source_url: refined.source_url ?? candidate.url,
-      is_public: true,
-      story: refined.story ?? candidate.story,
-      result_bullet_points: refined.result_bullet_points ?? candidate.resultBullets
-    };
+    return null;
   } catch (error) {
     logPageError(requestId, "case.search.failed", error);
     return null;

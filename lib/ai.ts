@@ -36,6 +36,12 @@ export type CaseSearchRefinement = {
   reason?: string;
 };
 
+export type CaseSearchQueryRefinement = {
+  query: string;
+  tags: string[];
+  reason?: string;
+};
+
 async function callAi(messages: Array<{ role: string; content: string }>) {
   const { apiKey, apiBase, model } = getAiConfig();
   if (!apiKey) {
@@ -141,6 +147,47 @@ export async function refineCaseSearchResult(
     }
   ]);
   return result as CaseSearchRefinement;
+}
+
+/**
+ * Refines the Tavily search query after a rejected candidate.
+ */
+export async function refineCaseSearchQuery(params: {
+  niche: string;
+  previousQuery: string;
+  previousTags: string[];
+  rejectionReason?: string;
+}): Promise<CaseSearchQueryRefinement> {
+  const result = await callAi([
+    {
+      role: "system",
+      content:
+        "Ты редактор поисковых запросов. Верни JSON: { query, tags, reason }. Запрос должен быть точнее и ориентирован на публичные кейсы."
+    },
+    {
+      role: "user",
+      content: JSON.stringify(
+        {
+          niche: params.niche,
+          previous_query: params.previousQuery,
+          previous_tags: params.previousTags,
+          rejection_reason: params.rejectionReason ?? ""
+        },
+        null,
+        2
+      )
+    }
+  ]);
+  const parsed = result as CaseSearchQueryRefinement;
+  const tags = Array.isArray((parsed as any).tags) ? (parsed as any).tags : [];
+  return {
+    query: String((parsed as any).query ?? params.previousQuery),
+    tags: tags
+      .map((tag: unknown) => String(tag ?? "").trim())
+      .filter((tag) => tag.length > 0)
+      .slice(0, 8),
+    reason: (parsed as any).reason ? String((parsed as any).reason) : undefined
+  };
 }
 
 export async function analyzeLead(lead: LeadForAnalysis) {
