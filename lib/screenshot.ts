@@ -1,4 +1,5 @@
 import { getScreenshotConfig } from "./env";
+import puppeteer from "puppeteer";
 
 type PageSpeedResponse = {
   lighthouseResult?: {
@@ -10,8 +11,33 @@ type PageSpeedResponse = {
   };
 };
 
+/**
+ * Captures a screenshot using the configured provider with fallback.
+ */
 export async function captureScreenshot(url: string) {
-  const { apiKey } = getScreenshotConfig();
+  const { apiKey, provider, timeoutMs } = getScreenshotConfig();
+  if (provider === "pagespeed") {
+    try {
+      return await captureWithPageSpeed(url, apiKey);
+    } catch {
+      try {
+        return await captureWithPuppeteer(url, timeoutMs);
+      } catch {
+        return null;
+      }
+    }
+  }
+  try {
+    return await captureWithPuppeteer(url, timeoutMs);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Captures a screenshot via Google PageSpeed API.
+ */
+async function captureWithPageSpeed(url: string, apiKey: string) {
   const apiUrl = new URL("https://www.googleapis.com/pagespeedonline/v5/runPagespeed");
   apiUrl.searchParams.set("url", url);
   apiUrl.searchParams.set("screenshot", "true");
@@ -35,4 +61,25 @@ export async function captureScreenshot(url: string) {
 
   const base64 = screenshotData.replace(/^data:image\/\w+;base64,/, "");
   return Buffer.from(base64, "base64");
+}
+
+/**
+ * Captures a screenshot via Puppeteer.
+ */
+async function captureWithPuppeteer(url: string, timeoutMs: number) {
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"]
+  });
+
+  try {
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
+    await page.goto(url, { waitUntil: "networkidle2", timeout: timeoutMs });
+    await new Promise<void>((resolve) => setTimeout(resolve, 750));
+    const buffer = (await page.screenshot({ type: "png" })) as Buffer;
+    return buffer;
+  } finally {
+    await browser.close();
+  }
 }

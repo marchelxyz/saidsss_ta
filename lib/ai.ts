@@ -25,6 +25,13 @@ async function callAi(messages: Array<{ role: string; content: string }>) {
   if (!apiKey) {
     throw new Error("AI_API_KEY is not set");
   }
+  const requestId = randomUUID();
+  const startedAt = Date.now();
+  logAiStep(requestId, "request.start", {
+    model,
+    apiBase,
+    messagesCount: messages.length
+  });
 
   const response = await fetch(`${apiBase}/chat/completions`, {
     method: "POST",
@@ -42,6 +49,10 @@ async function callAi(messages: Array<{ role: string; content: string }>) {
 
   if (!response.ok) {
     const text = await response.text();
+    logAiError(requestId, "request.failed", {
+      status: response.status,
+      body: text
+    });
     throw new Error(text || "AI request failed");
   }
 
@@ -50,7 +61,17 @@ async function callAi(messages: Array<{ role: string; content: string }>) {
   };
 
   const content = data.choices?.[0]?.message?.content ?? "{}";
-  return JSON.parse(content) as Record<string, unknown>;
+  try {
+    const parsed = JSON.parse(content) as Record<string, unknown>;
+    logAiStep(requestId, "request.success", { durationMs: Date.now() - startedAt });
+    return parsed;
+  } catch (error) {
+    logAiError(requestId, "response.parse_failed", {
+      durationMs: Date.now() - startedAt,
+      contentSnippet: content.slice(0, 2000)
+    });
+    throw error;
+  }
 }
 
 export async function analyzeLead(lead: LeadForAnalysis) {
@@ -150,10 +171,13 @@ export type IndustryPageDraft = {
 type AgentResult = Record<string, unknown>;
 
 async function runAgent(name: string, system: string, input: Record<string, unknown>) {
+  const startedAt = Date.now();
+  logAiStep("mas", "agent.start", { name });
   const result = await callAi([
     { role: "system", content: system },
     { role: "user", content: JSON.stringify({ agent: name, ...input }, null, 2) }
   ]);
+  logAiStep("mas", "agent.done", { name, durationMs: Date.now() - startedAt });
   return result as AgentResult;
 }
 
@@ -215,7 +239,7 @@ export async function generateIndustryPageMAS(niche: string) {
 
   const artDirector = await runAgent(
     "ArtDirector",
-    `Ты арт-директор. Сгенерируй промпт изображения в стиле Dark Tech Corporate, минимализм, неон, темный фон. Верни JSON: { image_prompt }.`,
+    `Ты арт-директор. Сгенерируй промпт изображения в стиле Dark Tech Corporate, минимализм, неон, темный фон. Без людей, лиц, врачей, пациентов и реальных фотографий — только абстрактная графика, схемы, диаграммы. Верни JSON: { image_prompt }.`,
     { niche, hero: architectDraft.hero }
   );
   log("art director done");
@@ -453,7 +477,6 @@ function isGenericCompany(value: string): boolean {
   }
   return false;
 }
-
 /**
  * Возвращает базовое сравнение людей и AI, если модель не заполнила таблицу.
  */

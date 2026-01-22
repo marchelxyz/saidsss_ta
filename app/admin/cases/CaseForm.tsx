@@ -6,6 +6,10 @@ type CaseItem = {
   id?: string;
   title: string;
   slug: string;
+  company_name: string;
+  provider_name: string;
+  source_url: string;
+  country: string;
   industry: string;
   challenge: string;
   solution: string;
@@ -20,6 +24,10 @@ export default function CaseForm({ initial }: { initial?: Partial<CaseItem> }) {
     id: initial?.id,
     title: initial?.title ?? "",
     slug: initial?.slug ?? "",
+    company_name: (initial as CaseItem | undefined)?.company_name ?? "",
+    provider_name: (initial as CaseItem | undefined)?.provider_name ?? "",
+    source_url: (initial as CaseItem | undefined)?.source_url ?? "",
+    country: (initial as CaseItem | undefined)?.country ?? "",
     industry: initial?.industry ?? "",
     challenge: initial?.challenge ?? "",
     solution: initial?.solution ?? "",
@@ -44,6 +52,10 @@ export default function CaseForm({ initial }: { initial?: Partial<CaseItem> }) {
     const payload = {
       title: form.title,
       slug: form.slug,
+      company_name: form.company_name,
+      provider_name: form.provider_name,
+      source_url: form.source_url,
+      country: form.country,
       industry: form.industry,
       challenge: form.challenge,
       solution: form.solution,
@@ -87,6 +99,22 @@ export default function CaseForm({ initial }: { initial?: Partial<CaseItem> }) {
       <div>
         <label>Отрасль</label>
         <input name="industry" value={form.industry} onChange={onChange} />
+      </div>
+      <div>
+        <label>Компания (реальный заказчик)</label>
+        <input name="company_name" value={form.company_name} onChange={onChange} />
+      </div>
+      <div>
+        <label>Вендор/партнер внедрения</label>
+        <input name="provider_name" value={form.provider_name} onChange={onChange} />
+      </div>
+      <div>
+        <label>Страна</label>
+        <input name="country" value={form.country} onChange={onChange} />
+      </div>
+      <div>
+        <label>Источник (URL)</label>
+        <input name="source_url" value={form.source_url} onChange={onChange} />
       </div>
       <div>
         <label>Проблема</label>
