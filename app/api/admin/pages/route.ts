@@ -13,143 +13,98 @@ type PageCreatePayload = {
 };
 
 function buildIndustryBlocks(draft: {
-  title: string;
-  subheadline: string;
-  pain_points: string[];
-  solution: string;
-  metrics: string[];
-  automation_example: string;
-  why_it_works: string;
-  value_props: string[];
-  process_steps: string[];
-  faq: string[];
-  deliverables: string[];
-  risks: string[];
+  hero: { title: string; subtitle: string };
+  pain_points: Array<{ title: string; description: string; loss_amount: string }>;
+  process_breakdown: { old_way: string[]; new_way_ai: string[] };
+  roi_calculator: {
+    hours_saved_per_month: number;
+    money_saved_per_year: number;
+    roi_percentage: number;
+    payback_period_months: number;
+  };
+  software_stack: string[];
+  comparison_table: Array<{ feature: string; human: string; ai: string }>;
+  case_study: { title: string; story: string; result_bullet_points: string[] };
 }) {
-  const valueProps =
-    draft.value_props?.length > 0
-      ? draft.value_props
-      : ["Снижение ФОТ", "Рост скорости обработки", "Контроль качества", "Прозрачные метрики"];
-  const processSteps =
-    draft.process_steps?.length > 0
-      ? draft.process_steps
-      : [
-          "Аудит всех отделов и потерь",
-          "Карта AI-внедрений и ROI",
-          "Внедрение и интеграции",
-          "Обучение команды"
-        ];
-  const deliverables =
-    draft.deliverables?.length > 0
-      ? draft.deliverables
-      : ["Отчет аудита", "Карта внедрений", "Запущенные автоматизации", "Инструкции"];
-  const risks =
-    draft.risks?.length > 0
-      ? draft.risks
-      : ["Потери на ручных операциях", "Срывы сроков", "Рост затрат"];
-  const faq =
-    draft.faq?.length > 0
-      ? draft.faq
-      : ["В: С чего начать? — О: С аудита всех отделов."];
-
   return [
     {
       block_type: "hero",
       content: {
-        title: draft.title,
-        subtitle: draft.subheadline,
+        title: draft.hero.title,
+        subtitle: draft.hero.subtitle,
         button_text: "Получить аудит",
-        button_link: "#contact"
+        button_link: "#contact",
+        short_title: "Вводная"
       },
       sort_order: 0
     },
     {
-      block_type: "list",
+      block_type: "pain_cards",
       content: {
-        title: "Боли отрасли",
+        title: "Где вы теряете деньги",
+        short_title: "Боли",
         items: draft.pain_points
       },
       sort_order: 1
     },
     {
-      block_type: "list",
+      block_type: "process_compare",
       content: {
-        title: "Что вы получите",
-        items: deliverables
+        title: "Было → Стало",
+        short_title: "Процесс",
+        old_way: draft.process_breakdown.old_way,
+        new_way_ai: draft.process_breakdown.new_way_ai
       },
       sort_order: 2
     },
     {
-      block_type: "text",
+      block_type: "roi",
       content: {
-        title: "Решение TeleAgent",
-        text: draft.solution
+        title: "ROI и окупаемость",
+        short_title: "ROI",
+        hours_saved_per_month: draft.roi_calculator.hours_saved_per_month,
+        money_saved_per_year: draft.roi_calculator.money_saved_per_year,
+        roi_percentage: draft.roi_calculator.roi_percentage,
+        payback_period_months: draft.roi_calculator.payback_period_months
       },
       sort_order: 3
     },
     {
-      block_type: "list",
+      block_type: "badges",
       content: {
-        title: "Преимущества",
-        items: valueProps
+        title: "Интеграции и стек",
+        short_title: "Стек",
+        items: draft.software_stack
       },
       sort_order: 4
     },
     {
-      block_type: "text",
+      block_type: "comparison_table",
       content: {
-        title: "Пример автоматизации",
-        text: draft.automation_example
+        title: "Сравнение: люди vs AI",
+        short_title: "Сравнение",
+        rows: draft.comparison_table
       },
       sort_order: 5
     },
     {
-      block_type: "text",
+      block_type: "case_study",
       content: {
-        title: "Почему это сработает",
-        text: draft.why_it_works
+        title: draft.case_study.title,
+        short_title: "Кейс",
+        story: draft.case_study.story,
+        result_bullet_points: draft.case_study.result_bullet_points
       },
       sort_order: 6
-    },
-    {
-      block_type: "list",
-      content: {
-        title: "Метрики и эффект",
-        items: draft.metrics
-      },
-      sort_order: 7
-    },
-    {
-      block_type: "list",
-      content: {
-        title: "Этапы внедрения",
-        items: processSteps
-      },
-      sort_order: 8
-    },
-    {
-      block_type: "list",
-      content: {
-        title: "Риски без внедрения",
-        items: risks
-      },
-      sort_order: 9
-    },
-    {
-      block_type: "text",
-      content: {
-        title: "FAQ",
-        text: faq.join("\n")
-      },
-      sort_order: 10
     },
     {
       block_type: "contact",
       content: {
         title: "Обсудим внедрение",
+        short_title: "Контакты",
         subtitle: "Оставьте контакты — вернемся с планом аудита."
       },
-      sort_order: 11
+      sort_order: 7
     }
   ];
 }
@@ -212,7 +167,7 @@ export async function POST(request: Request) {
         );
       }
       const draft = await draftIndustryPage(niche);
-      pageTitle = draft.title;
+      pageTitle = draft.hero.title;
       metaDescription = draft.meta_description;
       blocks = buildIndustryBlocks(draft);
     }

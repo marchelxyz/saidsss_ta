@@ -177,6 +177,85 @@ img {
   color: var(--muted);
 }
 
+.card ul {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  padding-left: 18px;
+}
+
+.loss {
+  margin-top: 12px;
+  color: #ff7b7b;
+  font-weight: 600;
+}
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.compare-grid .highlight {
+  border: 1px solid rgba(122, 108, 255, 0.6);
+  box-shadow: 0 0 24px rgba(122, 108, 255, 0.2);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.stat-card strong {
+  display: block;
+  font-size: 28px;
+  margin-bottom: 6px;
+}
+
+.stat-card span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.badge-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.comparison-table {
+  display: grid;
+  gap: 8px;
+}
+
+.comparison-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(15, 18, 25, 0.6);
+}
+
+.comparison-row.header {
+  background: rgba(122, 108, 255, 0.12);
+  font-weight: 600;
+}
+
+.comparison-row .highlight {
+  color: #cfc9ff;
+}
+
 .card .btn {
   margin-top: 14px;
   display: inline-flex;
