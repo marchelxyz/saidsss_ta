@@ -11,13 +11,20 @@ type PageSpeedResponse = {
   };
 };
 
+/**
+ * Captures a screenshot using the configured provider with fallback.
+ */
 export async function captureScreenshot(url: string) {
   const { apiKey, provider, timeoutMs } = getScreenshotConfig();
   if (provider === "pagespeed") {
     try {
       return await captureWithPageSpeed(url, apiKey);
     } catch {
-      return null;
+      try {
+        return await captureWithPuppeteer(url, timeoutMs);
+      } catch {
+        return null;
+      }
     }
   }
   try {
@@ -27,6 +34,9 @@ export async function captureScreenshot(url: string) {
   }
 }
 
+/**
+ * Captures a screenshot via Google PageSpeed API.
+ */
 async function captureWithPageSpeed(url: string, apiKey: string) {
   const apiUrl = new URL("https://www.googleapis.com/pagespeedonline/v5/runPagespeed");
   apiUrl.searchParams.set("url", url);
@@ -53,6 +63,9 @@ async function captureWithPageSpeed(url: string, apiKey: string) {
   return Buffer.from(base64, "base64");
 }
 
+/**
+ * Captures a screenshot via Puppeteer.
+ */
 async function captureWithPuppeteer(url: string, timeoutMs: number) {
   const browser = await puppeteer.launch({
     headless: true,
@@ -63,7 +76,7 @@ async function captureWithPuppeteer(url: string, timeoutMs: number) {
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
     await page.goto(url, { waitUntil: "networkidle2", timeout: timeoutMs });
-    await page.waitForTimeout(750);
+    await new Promise<void>((resolve) => setTimeout(resolve, 750));
     const buffer = (await page.screenshot({ type: "png" })) as Buffer;
     return buffer;
   } finally {
