@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getPool } from "@/lib/db";
 import SiteBlocks from "@/app/components/SiteBlocks";
+import { slugify } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 
@@ -42,13 +43,25 @@ export default async function CustomPage({ params }: PageParams) {
      from site_blocks where page_id = $1 order by sort_order asc`,
     [page.id]
   );
+  const navItems = blocksResult.rows
+    .filter((block) => block.block_type !== "hero" && block.block_type !== "contact")
+    .map((block) => ({
+      title: (block.content?.title as string | undefined) ?? "",
+      id: slugify((block.content?.title as string | undefined) ?? "")
+    }))
+    .filter((item) => item.title && item.id);
 
   return (
     <>
       <header className="container nav">
         <strong>TeleAgent</strong>
         <nav className="nav-links">
-          <a href="/#contact">Контакты</a>
+          {navItems.map((item) => (
+            <a key={item.id} href={`#${item.id}`}>
+              {item.title}
+            </a>
+          ))}
+          <a href="#contact">Контакты</a>
         </nav>
         <a className="btn btn-secondary" href="/#contact">
           Обсудить проект
