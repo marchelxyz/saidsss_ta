@@ -27,13 +27,6 @@ type VisualBuilderProps = {
   initialBlocks: BlockData[];
 };
 
-const listToText = (items?: string[]) => (items ?? []).join("\n");
-const textToList = (value: string) =>
-  value
-    .split("\n")
-    .map((item) => item.trim())
-    .filter(Boolean);
-
 export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuilderProps) {
   const router = useRouter();
   const [page, setPage] = useState<PageData>(initialPage);
@@ -45,6 +38,7 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
   );
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
 
   const sortedBlocks = useMemo(
     () => [...blocks].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
@@ -146,6 +140,7 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
         {sortedBlocks.map((block, index) => {
           const radius = block.style?.radius ? `${block.style.radius}px` : undefined;
           const cardStyle = radius ? { borderRadius: radius } : undefined;
+          const keyBase = `block-${index}`;
 
           return (
             <section
@@ -166,25 +161,29 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                     <div>
                       <h1
                         className="builder-editable"
-                        contentEditable
+                        contentEditable={editingKey === `${keyBase}-hero-title`}
                         suppressContentEditableWarning
-                        onBlur={(event) =>
-                          updateBlockContent(index, "title", event.currentTarget.textContent ?? "")
-                        }
+                        onDoubleClick={() => setEditingKey(`${keyBase}-hero-title`)}
+                        onBlur={(event) => {
+                          updateBlockContent(index, "title", event.currentTarget.textContent ?? "");
+                          setEditingKey(null);
+                        }}
                       >
                         {block.content.title}
                       </h1>
                       <p
                         className="builder-editable"
-                        contentEditable
+                        contentEditable={editingKey === `${keyBase}-hero-subtitle`}
                         suppressContentEditableWarning
-                        onBlur={(event) =>
+                        onDoubleClick={() => setEditingKey(`${keyBase}-hero-subtitle`)}
+                        onBlur={(event) => {
                           updateBlockContent(
                             index,
                             "subtitle",
                             event.currentTarget.textContent ?? ""
-                          )
-                        }
+                          );
+                          setEditingKey(null);
+                        }}
                       >
                         {block.content.subtitle}
                       </p>
@@ -192,15 +191,17 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                         <a className="btn" href={block.content.button_link ?? "#contact"}>
                           <span
                             className="builder-editable"
-                            contentEditable
+                            contentEditable={editingKey === `${keyBase}-hero-button`}
                             suppressContentEditableWarning
-                            onBlur={(event) =>
+                            onDoubleClick={() => setEditingKey(`${keyBase}-hero-button`)}
+                            onBlur={(event) => {
                               updateBlockContent(
                                 index,
                                 "button_text",
                                 event.currentTarget.textContent ?? ""
-                              )
-                            }
+                              );
+                              setEditingKey(null);
+                            }}
                           >
                             {block.content.button_text ?? "Получить аудит"}
                           </span>
@@ -220,21 +221,25 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                   <div className="container">
                     <h2
                       className="section-title builder-editable"
-                      contentEditable
+                      contentEditable={editingKey === `${keyBase}-text-title`}
                       suppressContentEditableWarning
-                      onBlur={(event) =>
-                        updateBlockContent(index, "title", event.currentTarget.textContent ?? "")
-                      }
+                      onDoubleClick={() => setEditingKey(`${keyBase}-text-title`)}
+                      onBlur={(event) => {
+                        updateBlockContent(index, "title", event.currentTarget.textContent ?? "");
+                        setEditingKey(null);
+                      }}
                     >
                       {block.content.title}
                     </h2>
                     <p
                       className="section-subtitle builder-editable"
-                      contentEditable
+                      contentEditable={editingKey === `${keyBase}-text-body`}
                       suppressContentEditableWarning
-                      onBlur={(event) =>
-                        updateBlockContent(index, "text", event.currentTarget.textContent ?? "")
-                      }
+                      onDoubleClick={() => setEditingKey(`${keyBase}-text-body`)}
+                      onBlur={(event) => {
+                        updateBlockContent(index, "text", event.currentTarget.textContent ?? "");
+                        setEditingKey(null);
+                      }}
                     >
                       {block.content.text}
                     </p>
@@ -247,11 +252,13 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                   <div className="container">
                     <h2
                       className="section-title builder-editable"
-                      contentEditable
+                      contentEditable={editingKey === `${keyBase}-list-title`}
                       suppressContentEditableWarning
-                      onBlur={(event) =>
-                        updateBlockContent(index, "title", event.currentTarget.textContent ?? "")
-                      }
+                      onDoubleClick={() => setEditingKey(`${keyBase}-list-title`)}
+                      onBlur={(event) => {
+                        updateBlockContent(index, "title", event.currentTarget.textContent ?? "");
+                        setEditingKey(null);
+                      }}
                     >
                       {block.content.title}
                     </h2>
@@ -260,12 +267,18 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                         <div className="card" style={cardStyle} key={`item-${itemIndex}`}>
                           <p
                             className="builder-editable"
-                            contentEditable
+                            contentEditable={
+                              editingKey === `${keyBase}-list-item-${itemIndex}`
+                            }
                             suppressContentEditableWarning
+                            onDoubleClick={() =>
+                              setEditingKey(`${keyBase}-list-item-${itemIndex}`)
+                            }
                             onBlur={(event) => {
                               const updated = [...(block.content.items ?? [])];
                               updated[itemIndex] = event.currentTarget.textContent ?? "";
                               updateBlockContent(index, "items", updated);
+                              setEditingKey(null);
                             }}
                           >
                             {item}
@@ -294,21 +307,25 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                     <div className="card" style={cardStyle}>
                       <h2
                         className="section-title builder-editable"
-                        contentEditable
+                        contentEditable={editingKey === `${keyBase}-image-title`}
                         suppressContentEditableWarning
-                        onBlur={(event) =>
-                          updateBlockContent(index, "title", event.currentTarget.textContent ?? "")
-                        }
+                        onDoubleClick={() => setEditingKey(`${keyBase}-image-title`)}
+                        onBlur={(event) => {
+                          updateBlockContent(index, "title", event.currentTarget.textContent ?? "");
+                          setEditingKey(null);
+                        }}
                       >
                         {block.content.title}
                       </h2>
                       <p
                         className="section-subtitle builder-editable"
-                        contentEditable
+                        contentEditable={editingKey === `${keyBase}-image-text`}
                         suppressContentEditableWarning
-                        onBlur={(event) =>
-                          updateBlockContent(index, "text", event.currentTarget.textContent ?? "")
-                        }
+                        onDoubleClick={() => setEditingKey(`${keyBase}-image-text`)}
+                        onBlur={(event) => {
+                          updateBlockContent(index, "text", event.currentTarget.textContent ?? "");
+                          setEditingKey(null);
+                        }}
                       >
                         {block.content.text}
                       </p>
@@ -336,21 +353,25 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                   <div className="container">
                     <h2
                       className="section-title builder-editable"
-                      contentEditable
+                      contentEditable={editingKey === `${keyBase}-contact-title`}
                       suppressContentEditableWarning
-                      onBlur={(event) =>
-                        updateBlockContent(index, "title", event.currentTarget.textContent ?? "")
-                      }
+                      onDoubleClick={() => setEditingKey(`${keyBase}-contact-title`)}
+                      onBlur={(event) => {
+                        updateBlockContent(index, "title", event.currentTarget.textContent ?? "");
+                        setEditingKey(null);
+                      }}
                     >
                       {block.content.title}
                     </h2>
                     <p
                       className="section-subtitle builder-editable"
-                      contentEditable
+                      contentEditable={editingKey === `${keyBase}-contact-subtitle`}
                       suppressContentEditableWarning
-                      onBlur={(event) =>
-                        updateBlockContent(index, "subtitle", event.currentTarget.textContent ?? "")
-                      }
+                      onDoubleClick={() => setEditingKey(`${keyBase}-contact-subtitle`)}
+                      onBlur={(event) => {
+                        updateBlockContent(index, "subtitle", event.currentTarget.textContent ?? "");
+                        setEditingKey(null);
+                      }}
                     >
                       {block.content.subtitle}
                     </p>
