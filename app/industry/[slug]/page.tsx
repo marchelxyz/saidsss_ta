@@ -12,14 +12,20 @@ type PageParams = {
 export async function generateMetadata({ params }: PageParams) {
   const pool = getPool();
   const pageResult = await pool.query(
-    `select title, meta_description
+    `select title, meta_description, published, generation_status
      from site_pages
-     where slug = $1 and page_type = 'industry' and published = true
+     where slug = $1 and page_type = 'industry'
      limit 1`,
     [params.slug]
   );
   const page = pageResult.rows[0];
   if (!page) return {};
+  if (!page.published && page.generation_status === "pending") {
+    return {
+      title: `${page.title} — генерация`,
+      description: "Страница генерируется. Обновите через пару минут."
+    };
+  }
   return {
     title: page.title,
     description: page.meta_description ?? undefined
@@ -29,14 +35,17 @@ export async function generateMetadata({ params }: PageParams) {
 export default async function IndustryPage({ params }: PageParams) {
   const pool = getPool();
   const pageResult = await pool.query(
-    `select id, title
+    `select id, title, published, generation_status, generation_error
      from site_pages
-     where slug = $1 and page_type = 'industry' and published = true
+     where slug = $1 and page_type = 'industry'
      limit 1`,
     [params.slug]
   );
   const page = pageResult.rows[0];
   if (!page) return notFound();
+  if (!page.published) {
+    return renderGenerationState(page.title as string, page.generation_status, page.generation_error);
+  }
 
   const blocksResult = await pool.query(
     `select id, block_type, content, style, sort_order
@@ -83,5 +92,28 @@ export default async function IndustryPage({ params }: PageParams) {
         </div>
       </footer>
     </>
+  );
+}
+
+function renderGenerationState(
+  title: string,
+  generationStatus: string | null,
+  generationError: string | null
+) {
+  if (generationStatus === "failed") {
+    return (
+      <main className="container" style={{ padding: "80px 0" }}>
+        <h1>{title}</h1>
+        <p>Страница не сгенерировалась. Попробуйте создать заново.</p>
+        {generationError && <p>Причина: {generationError}</p>}
+      </main>
+    );
+  }
+
+  return (
+    <main className="container" style={{ padding: "80px 0" }}>
+      <h1>{title}</h1>
+      <p>Страница генерируется. Обновите через минуту.</p>
+    </main>
   );
 }
