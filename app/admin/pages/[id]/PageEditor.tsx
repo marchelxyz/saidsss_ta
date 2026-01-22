@@ -108,6 +108,7 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
   const [newBlockType, setNewBlockType] = useState("text");
   const [isSaving, setIsSaving] = useState(false);
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
+  const [generateError, setGenerateError] = useState<string>("");
 
   const updateBlock = (index: number, patch: Partial<BlockData>) => {
     setBlocks((prev) =>
@@ -161,17 +162,25 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
     const prompt = (blocks[index]?.content?.image_prompt as string | undefined) ?? "";
     if (!prompt.trim()) return;
     setGeneratingIndex(index);
+    setGenerateError("");
     try {
       const response = await fetch("/api/admin/images/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt })
       });
-      if (!response.ok) return;
-      const data = (await response.json()) as {
+      const data = (await response.json().catch(() => ({}))) as {
         urls?: { avif?: string; webp?: string; jpg?: string };
+        message?: string;
       };
-      if (!data.urls) return;
+      if (!response.ok) {
+        setGenerateError(data.message ?? "Не удалось сгенерировать изображение.");
+        return;
+      }
+      if (!data.urls) {
+        setGenerateError("Сервис не вернул ссылки на изображения.");
+        return;
+      }
       updateBlockContent(index, "image_avif_url", data.urls.avif ?? "");
       updateBlockContent(index, "image_webp_url", data.urls.webp ?? "");
       updateBlockContent(index, "image_url", data.urls.jpg ?? "");
@@ -411,6 +420,7 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
                   >
                     {generatingIndex === index ? "Генерируем..." : "Перегенерировать"}
                   </button>
+                  {generateError && <p className="error">{generateError}</p>}
                 </>
               )}
 

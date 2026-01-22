@@ -26,8 +26,13 @@ export async function POST(request: Request) {
       }
     });
   } catch (error) {
+    console.error("[images] generate failed", error);
     return NextResponse.json(
-      { ok: false, message: "Не удалось сгенерировать изображение." },
+      {
+        ok: false,
+        message:
+          error instanceof Error ? error.message : "Не удалось сгенерировать изображение."
+      },
       { status: 500 }
     );
   }
