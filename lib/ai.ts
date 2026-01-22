@@ -201,7 +201,13 @@ export async function generateIndustryPageMAS(niche: string) {
   }
 
   if (!approved) {
-    log("critic not approved after max attempts, using last draft");
+    log("critic not approved after max attempts, running refiner");
+    architectDraft = await runAgent(
+      "Refiner",
+      `Ты редактор-валидатор. Исправь все замечания критика и согласуй цифры. ${MAS_RULES} Убедись, что проценты реалистичны (0-100), нет противоречий в таблицах и кейсе. Верни JSON: { hero, process_breakdown, comparison_table, software_stack, case_study }.`,
+      { niche, audit: auditor, feedback: criticFeedback, previous_draft: architectDraft }
+    );
+    log("refiner done");
   }
 
   const artDirector = await runAgent(
@@ -225,11 +231,54 @@ export async function generateIndustryPageMAS(niche: string) {
   );
   log("ui qa done");
 
+  const normalizePercent = (value: unknown, fallback = 20) => {
+    const num = typeof value === "number" ? value : Number(value);
+    if (Number.isNaN(num)) return fallback;
+    return Math.max(1, Math.min(100, Math.round(num)));
+  };
+
+  const normalizeLoss = (value: unknown) => {
+    const text = String(value ?? "").trim();
+    if (!text) return "Потеря: -15%";
+    const match = text.match(/-?\d{1,3}/);
+    const percent = match ? normalizePercent(match[0], 15) : 15;
+    return `Потеря: -${percent}%`;
+  };
+
+  const normalizePainPoints = (
+    items: IndustryPageDraft["pain_points"] | undefined
+  ): IndustryPageDraft["pain_points"] => {
+    const safeItems = Array.isArray(items) ? items : [];
+    return safeItems.map((item) => ({
+      title: item.title || "Потеря конверсии",
+      description: item.description || "Есть разрыв между заявкой и результатом.",
+      loss_amount: normalizeLoss(item.loss_amount)
+    }));
+  };
+
   const result: IndustryPageDraft = {
     hero: uiQa.hero as IndustryPageDraft["hero"],
-    pain_points: (auditor.pain_points as IndustryPageDraft["pain_points"]) ?? [],
+    pain_points: normalizePainPoints(
+      auditor.pain_points as IndustryPageDraft["pain_points"]
+    ),
     process_breakdown: uiQa.process_breakdown as IndustryPageDraft["process_breakdown"],
-    roi_calculator: auditor.roi_calculator as IndustryPageDraft["roi_calculator"],
+    roi_calculator: {
+      hours_saved_per_month: Math.max(
+        10,
+        Number((auditor.roi_calculator as any)?.hours_saved_per_month ?? 60)
+      ),
+      savings_percentage: normalizePercent(
+        (auditor.roi_calculator as any)?.savings_percentage ?? 25
+      ),
+      revenue_uplift_percentage: normalizePercent(
+        (auditor.roi_calculator as any)?.revenue_uplift_percentage ?? 15
+      ),
+      roi_percentage: normalizePercent((auditor.roi_calculator as any)?.roi_percentage ?? 80),
+      payback_period_months: Math.max(
+        1,
+        Number((auditor.roi_calculator as any)?.payback_period_months ?? 2)
+      )
+    },
     software_stack: (uiQa.software_stack as string[]) ?? [],
     comparison_table: (uiQa.comparison_table as IndustryPageDraft["comparison_table"]) ?? [],
     case_study: uiQa.case_study as IndustryPageDraft["case_study"],
