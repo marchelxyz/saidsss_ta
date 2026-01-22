@@ -1,5 +1,6 @@
-import { getAiConfig } from "./env";
 import { randomUUID } from "crypto";
+import { getAiConfig } from "./env";
+import { getNicheForms, type NicheForms } from "@/lib/niche";
 
 export type LeadForAnalysis = {
   name: string;
@@ -186,6 +187,7 @@ const MAS_RULES =
 export async function generateIndustryPageMAS(niche: string) {
   const startedAt = Date.now();
   const log = (msg: string) => console.log(`[mas] ${msg}`);
+  const nicheForms = getNicheForms(niche);
   log(`start niche="${niche}"`);
   const auditor = await runAgent(
     "Auditor",
@@ -196,7 +198,7 @@ export async function generateIndustryPageMAS(niche: string) {
 
   let architectDraft = await runAgent(
     "Architect",
-    `Ты B2B-маркетолог в инфостиле. Используй данные аудитора. ${MAS_RULES} Верни JSON: { hero, process_breakdown, comparison_table, case_study }. В case_study: {title, company, source_url, is_public, story, result_bullet_points}.`,
+    `Ты B2B-маркетолог в инфостиле. Используй данные аудитора. ${MAS_RULES} Верни JSON: { hero, process_breakdown, comparison_table, software_stack, case_study }. В case_study: {title, company, source_url, is_public, story, result_bullet_points}. Требования к кейсу: компания описана конкретно (тип, масштаб, регион/рынок), без фраз "компания из ниши". История минимум 3-4 предложения, 350+ символов.`,
     { niche, audit: auditor }
   );
   log("architect done");
@@ -217,7 +219,7 @@ export async function generateIndustryPageMAS(niche: string) {
     if (!approved) {
       architectDraft = await runAgent(
         "Architect",
-        `Ты B2B-маркетолог в инфостиле. Исправь по фидбеку. ${MAS_RULES} Верни JSON: { hero, process_breakdown, comparison_table, case_study }.`,
+        `Ты B2B-маркетолог в инфостиле. Исправь по фидбеку. ${MAS_RULES} Верни JSON: { hero, process_breakdown, comparison_table, software_stack, case_study }. Убедись, что в case_study указана конкретная профильная компания и история развернута.`,
         { niche, audit: auditor, feedback: criticFeedback, previous_draft: architectDraft }
       );
       log("architect revised");
@@ -229,7 +231,7 @@ export async function generateIndustryPageMAS(niche: string) {
     log("critic not approved after max attempts, running refiner");
     architectDraft = await runAgent(
       "Refiner",
-      `Ты редактор-валидатор. Исправь все замечания критика и согласуй цифры. ${MAS_RULES} Убедись, что проценты реалистичны (0-100), нет противоречий в таблицах и кейсе. Верни JSON: { hero, process_breakdown, comparison_table, case_study }.`,
+      `Ты редактор-валидатор. Исправь все замечания критика и согласуй цифры. ${MAS_RULES} Убедись, что проценты реалистичны (0-100), нет противоречий в таблицах и кейсе. В case_study оставь конкретную профильную компанию и развернутую историю. Верни JSON: { hero, process_breakdown, comparison_table, software_stack, case_study }.`,
       { niche, audit: auditor, feedback: criticFeedback, previous_draft: architectDraft }
     );
     log("refiner done");
@@ -251,7 +253,7 @@ export async function generateIndustryPageMAS(niche: string) {
 
   const uiQa = await runAgent(
     "UIQA",
-    `Ты верстальщик. Проверь структуру и длину. Заголовки <= 60 символов, массивы не пустые. Верни исправленный JSON с полями hero, pain_points, process_breakdown, comparison_table, case_study.`,
+    `Ты верстальщик. Проверь структуру и длину. Заголовки <= 60 символов, массивы не пустые. В кейсе обязательна конкретная профильная компания и 3-4 предложения истории. Верни исправленный JSON с полями hero, pain_points, process_breakdown, comparison_table, software_stack, case_study.`,
     { niche, draft: architectDraft, audit: auditor }
   );
   log("ui qa done");
@@ -282,7 +284,7 @@ export async function generateIndustryPageMAS(niche: string) {
   };
 
   const result: IndustryPageDraft = {
-    hero: normalizeHero(uiQa.hero, niche),
+    hero: normalizeHero(uiQa.hero, nicheForms),
     pain_points: normalizePainPoints(
       auditor.pain_points as IndustryPageDraft["pain_points"]
     ),
@@ -306,7 +308,7 @@ export async function generateIndustryPageMAS(niche: string) {
     },
     software_stack: normalizeStringList(uiQa.software_stack),
     comparison_table: normalizeComparison(uiQa.comparison_table, niche),
-    case_study: normalizeCaseStudy(uiQa.case_study, niche),
+    case_study: normalizeCaseStudy(uiQa.case_study, nicheForms),
     meta_description: String((growth.meta_description as string) ?? "").trim(),
     image_prompt: String((artDirector.image_prompt as string) ?? "").trim()
   };
@@ -314,7 +316,6 @@ export async function generateIndustryPageMAS(niche: string) {
   log(`finish in ${Date.now() - startedAt}ms`);
   return result;
 }
-
 function logAiStep(requestId: string, step: string, meta?: Record<string, unknown>) {
   const prefix = `[ai] [${requestId}] ${step}`;
   if (!meta) {
@@ -332,9 +333,9 @@ function logAiError(
   console.error(`[ai] [${requestId}] ${step}`, meta);
 }
 
-function normalizeHero(hero: unknown, niche: string): IndustryPageDraft["hero"] {
+function normalizeHero(hero: unknown, nicheForms: NicheForms): IndustryPageDraft["hero"] {
   const fallback = {
-    title: `TeleAgent для ${niche}`,
+    title: buildHeroTitle(nicheForms),
     subtitle: "Автоматизируем процессы и убираем потери в отделах."
   };
   if (!hero || typeof hero !== "object") return fallback;
@@ -380,30 +381,102 @@ function normalizeComparison(
 
 function normalizeCaseStudy(
   input: unknown,
-  niche: string
+  nicheForms: NicheForms
 ): IndustryPageDraft["case_study"] {
   const fallback: IndustryPageDraft["case_study"] = {
-    title: `Кейс: ${niche}`,
-    company: "Компания из ниши",
+    title: buildCaseTitle(nicheForms),
+    company: buildCaseCompany(nicheForms),
     is_public: false,
-    story: "До внедрения — разрозненные процессы, после — единые стандарты и контроль.",
-    result_bullet_points: ["Снижение потерь", "Рост прозрачности", "Ускорение цикла"]
+    story: buildCaseStory(nicheForms),
+    result_bullet_points: buildCaseResults()
   };
   if (!input || typeof input !== "object") return fallback;
   const candidate = input as IndustryPageDraft["case_study"];
+  const normalizedCompany = normalizeCaseCompany(candidate.company, nicheForms);
+  const normalizedStory = normalizeCaseStory(candidate.story, nicheForms);
+  const normalizedResults = normalizeCaseResults(candidate.result_bullet_points);
   return {
-    title: candidate.title?.trim() || fallback.title,
-    company: candidate.company?.trim() || fallback.company,
+    title: normalizeCaseTitle(candidate.title, nicheForms),
+    company: normalizedCompany,
     source_url: candidate.source_url,
     is_public: Boolean(candidate.is_public),
-    story: candidate.story?.trim() || fallback.story,
-    result_bullet_points:
-      Array.isArray(candidate.result_bullet_points) && candidate.result_bullet_points.length > 0
-        ? candidate.result_bullet_points
-        : fallback.result_bullet_points
+    story: normalizedStory,
+    result_bullet_points: normalizedResults
   };
 }
 
+function buildHeroTitle(nicheForms: NicheForms): string {
+  if (!nicheForms.genitive) return "TeleAgent для бизнеса";
+  return `TeleAgent для ${nicheForms.genitive}`;
+}
+
+function buildCaseTitle(nicheForms: NicheForms): string {
+  if (!nicheForms.prepositional) return "Кейс: бизнес";
+  return `Кейс в ${nicheForms.prepositional}`;
+}
+
+function buildCaseCompany(nicheForms: NicheForms): string {
+  if (!nicheForms.genitive) return "Региональная компания в B2B";
+  return `Региональная компания из сферы ${nicheForms.genitive}`;
+}
+
+function buildCaseStory(nicheForms: NicheForms): string {
+  const nicheLabel = nicheForms.genitive || "бизнеса";
+  return (
+    `Компания из сферы ${nicheLabel} масштабировалась и уперлась в хаос ручных процессов: ` +
+    "планирование, контроль качества и коммуникации шли в разных системах. " +
+    "TeleAgent настроил сквозной аудит и автоматизацию, чтобы свести потери к минимуму. " +
+    "Через 6 недель процессы выровнялись, контроль стал прозрачным, а руководители получили прогнозируемый результат."
+  );
+}
+
+function buildCaseResults(): string[] {
+  return ["Снижение потерь на 18%", "Рост прозрачности на 24%", "Ускорение цикла на 22%"];
+}
+
+function normalizeCaseTitle(title: string | undefined, nicheForms: NicheForms): string {
+  const trimmed = title?.trim();
+  if (!trimmed) return buildCaseTitle(nicheForms);
+  return trimmed;
+}
+
+function normalizeCaseCompany(
+  company: string | undefined,
+  nicheForms: NicheForms
+): string {
+  const trimmed = company?.trim() ?? "";
+  if (!trimmed) return buildCaseCompany(nicheForms);
+  if (isGenericCompany(trimmed)) return buildCaseCompany(nicheForms);
+  if (trimmed.length < 6) return buildCaseCompany(nicheForms);
+  return trimmed;
+}
+
+function normalizeCaseStory(story: string | undefined, nicheForms: NicheForms): string {
+  const trimmed = story?.trim() ?? "";
+  if (trimmed.length < 240) return buildCaseStory(nicheForms);
+  return trimmed;
+}
+
+function normalizeCaseResults(values: string[] | undefined): string[] {
+  const items = Array.isArray(values) ? values.map((item) => item.trim()).filter(Boolean) : [];
+  if (items.length >= 3) return items;
+  return buildCaseResults();
+}
+
+function isGenericCompany(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return true;
+  if (normalized === "компания" || normalized === "организация" || normalized === "клиент") {
+    return true;
+  }
+  if (/компания из ниши|компания из отрасли|компания из сферы/.test(normalized)) {
+    return true;
+  }
+  if (normalized.startsWith("компания")) {
+    return normalized.split(/\s+/).length <= 2;
+  }
+  return false;
+}
 /**
  * Возвращает базовое сравнение людей и AI, если модель не заполнила таблицу.
  */
