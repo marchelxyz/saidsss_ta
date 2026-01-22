@@ -16,16 +16,16 @@ async function generateWithGemini(prompt: string): Promise<GeneratedImage> {
 
   const normalizedModel = model.startsWith("models/") ? model : `models/${model}`;
   const safePrompt = typeof prompt === "string" ? prompt : JSON.stringify(prompt);
-  console.log(`[images] gemini request model=${normalizedModel}`);
+  console.log(`[images] gemini request model=${normalizedModel} endpoint=generateImages`);
   const response = await fetch(
-    `${apiBase}/${normalizedModel}:generateContent?key=${apiKey}`,
+    `${apiBase}/${normalizedModel}:generateImages?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: safePrompt }] }],
-        generationConfig: {
-          response_mime_type: "image/png"
+        prompt: { text: safePrompt },
+        imageGenerationConfig: {
+          outputMimeType: "image/png"
         }
       })
     }
@@ -38,26 +38,20 @@ async function generateWithGemini(prompt: string): Promise<GeneratedImage> {
   }
 
   const data = (await response.json()) as {
-    candidates?: Array<{
-      content?: { parts?: Array<{ inlineData?: { data?: string; mimeType?: string } }> };
-    }>;
+    generatedImages?: Array<{ bytesBase64Encoded?: string; mimeType?: string }>;
   };
 
-  const inline = data.candidates?.[0]?.content?.parts?.find(
-    (part) => part.inlineData?.data
-  )?.inlineData;
-
-  if (!inline?.data) {
-    console.log("[images] gemini response missing inlineData", {
-      hasCandidates: Boolean(data.candidates?.length),
-      parts: data.candidates?.[0]?.content?.parts?.length ?? 0
+  const image = data.generatedImages?.[0];
+  if (!image?.bytesBase64Encoded) {
+    console.log("[images] gemini response missing generatedImages", {
+      hasImages: Boolean(data.generatedImages?.length)
     });
     throw new Error("Gemini response has no image data");
   }
 
   return {
-    buffer: Buffer.from(inline.data, "base64"),
-    contentType: inline.mimeType ?? "image/png"
+    buffer: Buffer.from(image.bytesBase64Encoded, "base64"),
+    contentType: image.mimeType ?? "image/png"
   };
 }
 
