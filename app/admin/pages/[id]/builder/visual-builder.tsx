@@ -27,6 +27,68 @@ type VisualBuilderProps = {
   initialBlocks: BlockData[];
 };
 
+const BLOCK_TYPES = [
+  { value: "hero", label: "Hero" },
+  { value: "text", label: "Текст" },
+  { value: "list", label: "Список" },
+  { value: "image", label: "Изображение" },
+  { value: "contact", label: "Контакты" }
+];
+
+const buildDefaultBlock = (type: string): BlockData => {
+  switch (type) {
+    case "hero":
+      return {
+        block_type: "hero",
+        content: {
+          title: "TeleAgent — трансформация бизнеса с AI",
+          subtitle: "Аудит, внедрение и обучение под ключ.",
+          button_text: "Получить аудит",
+          button_link: "#contact"
+        },
+        style: { radius: 18 }
+      };
+    case "list":
+      return {
+        block_type: "list",
+        content: {
+          title: "Ключевые боли",
+          items: ["Пункт 1", "Пункт 2", "Пункт 3"]
+        },
+        style: { radius: 16 }
+      };
+    case "image":
+      return {
+        block_type: "image",
+        content: {
+          title: "Блок с изображением",
+          text: "Описание блока",
+          image_url: ""
+        },
+        style: { radius: 16 }
+      };
+    case "contact":
+      return {
+        block_type: "contact",
+        content: {
+          title: "Обсудим проект",
+          subtitle: "Оставьте контакты — вернемся с планом аудита."
+        },
+        style: { radius: 16 }
+      };
+    case "text":
+    default:
+      return {
+        block_type: "text",
+        content: {
+          title: "Заголовок секции",
+          text: "Текст блока"
+        },
+        style: { radius: 16 }
+      };
+  }
+};
+
 export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuilderProps) {
   const router = useRouter();
   const [page, setPage] = useState<PageData>(initialPage);
@@ -36,6 +98,7 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
       sort_order: block.sort_order ?? index
     }))
   );
+  const [newBlockType, setNewBlockType] = useState("text");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -74,6 +137,21 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
       return updated.map((block, idx) => ({ ...block, sort_order: idx }));
     });
     setDragIndex(null);
+  };
+
+  const addBlock = () => {
+    setBlocks((prev) => [
+      ...prev,
+      { ...buildDefaultBlock(newBlockType), sort_order: prev.length }
+    ]);
+  };
+
+  const addBaseTemplate = () => {
+    const template = ["hero", "text", "list", "contact"].map((type, index) => ({
+      ...buildDefaultBlock(type),
+      sort_order: index
+    }));
+    setBlocks(template);
   };
 
   const save = async () => {
@@ -127,6 +205,28 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
       </div>
 
       <main className="builder-canvas">
+        <div className="builder-panel container">
+          <div className="builder-panel-row">
+            <select
+              className="builder-input"
+              value={newBlockType}
+              onChange={(event) => setNewBlockType(event.target.value)}
+            >
+              {BLOCK_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+            <button className="btn" type="button" onClick={addBlock}>
+              Добавить блок
+            </button>
+            <button className="btn btn-secondary" type="button" onClick={addBaseTemplate}>
+              Базовый шаблон
+            </button>
+          </div>
+        </div>
+
         <header className="container nav">
           <strong>TeleAgent</strong>
           <nav className="nav-links">
@@ -136,6 +236,14 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
             Обсудить проект
           </a>
         </header>
+
+        {sortedBlocks.length === 0 && (
+          <div className="container">
+            <div className="admin-card" style={{ marginTop: 24 }}>
+              Блоков пока нет. Добавьте блок или примените базовый шаблон.
+            </div>
+          </div>
+        )}
 
         {sortedBlocks.map((block, index) => {
           const radius = block.style?.radius ? `${block.style.radius}px` : undefined;
