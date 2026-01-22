@@ -480,7 +480,7 @@ async function processIndustryPageGeneration(params: {
     });
     const blocks = buildIndustryBlocks({
       ...draft,
-      case_study: caseStudyOverride ?? draft.case_study,
+      case_study: caseStudyOverride ?? undefined,
       image: imageData
     });
     logPageStep(requestId, "blocks.built", { count: blocks.length });
@@ -690,7 +690,10 @@ function buildCaseStudyFromCases(
   result_bullet_points: string[];
 } | null {
   const item = cases.find(
-    (entry) => entry.company_name && entry.source_url
+    (entry) =>
+      Boolean(entry.company_name) &&
+      Boolean(entry.source_url) &&
+      !isGenericCaseCompany(entry.company_name ?? "")
   );
   if (!item) return null;
   const storyParts = [
@@ -704,7 +707,7 @@ function buildCaseStudyFromCases(
     .filter(Boolean);
   const story =
     storyParts.join(" ") ||
-    `Кейс из ниши ${niche}: автоматизация процессов и контроль ключевых метрик.`;
+    `Публичный кейс из ниши ${niche}: автоматизация процессов и контроль ключевых метрик.`;
   return {
     title: item.title || `Кейс: ${niche}`,
     company: item.company_name || item.title || "Реальный кейс",
@@ -715,4 +718,19 @@ function buildCaseStudyFromCases(
     story,
     result_bullet_points: bullets.length > 0 ? bullets : ["Снижение потерь", "Рост прозрачности"]
   };
+}
+
+function isGenericCaseCompany(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return true;
+  if (normalized === "компания" || normalized === "организация" || normalized === "клиент") {
+    return true;
+  }
+  if (/компания из ниши|компания из отрасли|компания из сферы/.test(normalized)) {
+    return true;
+  }
+  if (normalized.startsWith("компания")) {
+    return normalized.split(/\s+/).length <= 2;
+  }
+  return false;
 }
