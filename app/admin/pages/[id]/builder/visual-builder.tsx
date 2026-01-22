@@ -40,6 +40,7 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
   const [isSaving, setIsSaving] = useState(false);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
+  const [generateError, setGenerateError] = useState<string>("");
 
   const sortedBlocks = useMemo(
     () => [...blocks].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
@@ -81,17 +82,25 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
     const prompt = (blocks[index]?.content?.image_prompt as string | undefined) ?? "";
     if (!prompt.trim()) return;
     setGeneratingIndex(index);
+    setGenerateError("");
     try {
       const response = await fetch("/api/admin/images/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt })
       });
-      if (!response.ok) return;
-      const data = (await response.json()) as {
+      const data = (await response.json().catch(() => ({}))) as {
         urls?: { avif?: string; webp?: string; jpg?: string };
+        message?: string;
       };
-      if (!data.urls) return;
+      if (!response.ok) {
+        setGenerateError(data.message ?? "Не удалось сгенерировать изображение.");
+        return;
+      }
+      if (!data.urls) {
+        setGenerateError("Сервис не вернул ссылки на изображения.");
+        return;
+      }
       updateBlockContent(index, "image_avif_url", data.urls.avif ?? "");
       updateBlockContent(index, "image_webp_url", data.urls.webp ?? "");
       updateBlockContent(index, "image_url", data.urls.jpg ?? "");
@@ -379,6 +388,7 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                       >
                         {generatingIndex === index ? "Генерируем..." : "Сгенерировать"}
                       </button>
+                      {generateError && <p className="error">{generateError}</p>}
                     </div>
                     {(block.content.image_avif_url ||
                       block.content.image_webp_url ||
