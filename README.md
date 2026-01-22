@@ -20,6 +20,16 @@ ADMIN_TOKEN=your-random-token
 AI_API_KEY=your-ai-key
 AI_API_BASE=https://api.openai.com/v1
 AI_MODEL=gpt-4o-mini
+IMAGE_PROVIDER=gemini
+IMAGE_API_KEY=your-image-key
+IMAGE_API_BASE=https://generativelanguage.googleapis.com/v1beta
+IMAGE_MODEL=models/gemini-2.0-flash-image-generation
+S3_ENDPOINT=https://storage.yandexcloud.net
+S3_REGION=ru-central1
+S3_BUCKET=your-bucket
+S3_ACCESS_KEY=your-access-key
+S3_SECRET_KEY=your-secret-key
+S3_PUBLIC_BASE_URL=https://storage.yandexcloud.net/your-bucket
 RUN_MIGRATIONS=true
 ```
 
@@ -29,6 +39,8 @@ RUN_MIGRATIONS=true
 - `ADMIN_TOKEN` — токен для cookie-сессии админки. Можно задать любой длинный секрет.
 - `AI_API_KEY` — ключ для AI-анализа лидов и AI-помощника статей.
 - `AI_API_BASE` и `AI_MODEL` — позволяют использовать другой OpenAI‑совместимый провайдер/модель (по умолчанию `gpt-4o-mini`).
+- `IMAGE_PROVIDER`, `IMAGE_API_KEY`, `IMAGE_API_BASE`, `IMAGE_MODEL` — генерация изображений (Gemini/OpenAI).
+- `S3_*` — хранилище изображений (Yandex Object Storage, S3‑совместимое).
 
 ## Деплой на Railway (Web + Postgres)
 

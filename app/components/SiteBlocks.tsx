@@ -96,9 +96,7 @@ export default function SiteBlocks({ blocks, sourcePage }: SiteBlocksProps) {
                     <div className="card" style={cardStyle} key={`pain-${itemIndex}`}>
                       <strong>{item.title}</strong>
                       <p>{item.description}</p>
-                      {item.loss_amount && (
-                        <p className="loss">-{item.loss_amount}</p>
-                      )}
+                      {item.loss_amount && <p className="loss">{item.loss_amount}</p>}
                     </div>
                   ))}
                 </div>
@@ -150,8 +148,12 @@ export default function SiteBlocks({ blocks, sourcePage }: SiteBlocksProps) {
                     <span>часов в месяц</span>
                   </div>
                   <div className="stat-card">
-                    <strong>{block.content.money_saved_per_year}₽</strong>
-                    <span>экономия в год</span>
+                    <strong>{block.content.savings_percentage}%</strong>
+                    <span>снижение затрат</span>
+                  </div>
+                  <div className="stat-card">
+                    <strong>{block.content.revenue_uplift_percentage}%</strong>
+                    <span>рост выручки</span>
                   </div>
                   <div className="stat-card">
                     <strong>{block.content.roi_percentage}%</strong>
@@ -224,6 +226,19 @@ export default function SiteBlocks({ blocks, sourcePage }: SiteBlocksProps) {
               <div className="container">
                 <h2 className="section-title">{block.content.title}</h2>
                 <div className="card" style={cardStyle}>
+                  {(block.content.company || block.content.source_url) && (
+                    <p className="case-meta">
+                      {block.content.company && <strong>{block.content.company}</strong>}
+                      {block.content.source_url && (
+                        <a href={block.content.source_url} target="_blank" rel="noreferrer">
+                          Источник
+                        </a>
+                      )}
+                    </p>
+                  )}
+                  {block.content.is_public === false && (
+                    <p className="case-note">Кейс из практики без раскрытия клиента.</p>
+                  )}
                   <p>{block.content.story}</p>
                   <ul>
                     {bullets.map((item, itemIndex) => (
@@ -238,6 +253,9 @@ export default function SiteBlocks({ blocks, sourcePage }: SiteBlocksProps) {
 
         if (block.block_type === "image") {
           const sectionId = getSectionId(block.content.title as string | undefined);
+          const avifUrl = block.content.image_avif_url as string | undefined;
+          const webpUrl = block.content.image_webp_url as string | undefined;
+          const jpgUrl = block.content.image_url as string | undefined;
           return (
             <section className="section" key={`image-${index}`} id={sectionId}>
               <div className="container builder-image">
@@ -245,9 +263,13 @@ export default function SiteBlocks({ blocks, sourcePage }: SiteBlocksProps) {
                   <h2 className="section-title">{block.content.title}</h2>
                   <p className="section-subtitle">{block.content.text}</p>
                 </div>
-                {block.content.image_url && (
+                {(avifUrl || webpUrl || jpgUrl) && (
                   <div className="card" style={cardStyle}>
-                    <img src={block.content.image_url} alt={block.content.title ?? "image"} />
+                    <picture>
+                      {avifUrl && <source srcSet={avifUrl} type="image/avif" />}
+                      {webpUrl && <source srcSet={webpUrl} type="image/webp" />}
+                      {jpgUrl && <img src={jpgUrl} alt={block.content.title ?? "image"} />}
+                    </picture>
                   </div>
                 )}
               </div>

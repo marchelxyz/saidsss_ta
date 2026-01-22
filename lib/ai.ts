@@ -122,7 +122,8 @@ export type IndustryPageDraft = {
   };
   roi_calculator: {
     hours_saved_per_month: number;
-    money_saved_per_year: number;
+    savings_percentage: number;
+    revenue_uplift_percentage: number;
     roi_percentage: number;
     payback_period_months: number;
   };
@@ -134,6 +135,9 @@ export type IndustryPageDraft = {
   }>;
   case_study: {
     title: string;
+    company: string;
+    source_url?: string;
+    is_public: boolean;
     story: string;
     result_bullet_points: string[];
   };
@@ -145,11 +149,11 @@ export async function draftIndustryPage(niche: string) {
     {
       role: "system",
       content:
-        "Ты старший бизнес-консультант Big4 (McKinsey/BCG) по операционной эффективности. Пиши жестко и конкретно, с цифрами и профессиональным жаргоном ниши. Ненавидишь общие слова и клише. Твоя цель — показать владельцу бизнеса, сколько денег он теряет, и почему аудит TeleAgent окупится. Верни ТОЛЬКО валидный JSON по строгой схеме."
+        "Ты старший бизнес-консультант Big4 (McKinsey/BCG) по операционной эффективности. Пиши жестко и конкретно, с цифрами и профессиональным жаргоном ниши. Ненавидишь общие слова и клише. Запрещены суммы денег и валюты — используй только проценты, доли, индексы и сроки. Реальные компании упоминай только если кейс публичный и проверяемый, иначе используй обезличенное описание. Верни ТОЛЬКО валидный JSON по строгой схеме."
     },
     {
       role: "user",
-      content: `Ниша: ${niche}.\n\nСгенерируй насыщенный лендинг с данными для инфографики. Обязательно используй сленг ниши и названия ПО (1C, amoCRM, Bitrix24, YCLIENTS, iiko — если релевантно).\nСхема JSON:\n{\n  \"hero\": {\"title\": \"Жесткий заголовок с цифрой\", \"subtitle\": \"Оффер с конкретным обещанием\"},\n  \"pain_points\": [\n    {\"title\": \"Название боли\", \"description\": \"Детальная ситуация\", \"loss_amount\": \"Потеря: 50 000₽/мес\"}\n  ],\n  \"process_breakdown\": {\"old_way\": [\"...\"], \"new_way_ai\": [\"...\"]},\n  \"roi_calculator\": {\"hours_saved_per_month\": 120, \"money_saved_per_year\": 720000, \"roi_percentage\": 450, \"payback_period_months\": 1.5},\n  \"software_stack\": [\"...\"],\n  \"comparison_table\": [\n    {\"feature\": \"Скорость ответа\", \"human\": \"5-20 минут\", \"ai\": \"2 секунды\"}\n  ],\n  \"case_study\": {\"title\": \"Реальный сценарий\", \"story\": \"Короткая история\", \"result_bullet_points\": [\"...\"]},\n  \"meta_description\": \"до 160 символов\"\n}\n\nТребования:\n- pain_points: 5 пунктов.\n- old_way/new_way_ai: по 4-6 шагов.\n- software_stack: 6-8 инструментов, релевантных нише.\n- comparison_table: 4-5 строк.\n- case_study.result_bullet_points: 3-4 пункта.\n- Только валидный JSON, без Markdown.`
+      content: `Ниша: ${niche}.\n\nСгенерируй насыщенный лендинг с данными для инфографики. Обязательно используй сленг ниши и названия ПО (1C, amoCRM, Bitrix24, YCLIENTS, iiko — если релевантно).\nЗАПРЕТ: суммы в валюте. Используй ТОЛЬКО проценты/доли/индексы/сроки.\nСхема JSON:\n{\n  \"hero\": {\"title\": \"Жесткий заголовок с цифрой\", \"subtitle\": \"Оффер с конкретным обещанием\"},\n  \"pain_points\": [\n    {\"title\": \"Название боли\", \"description\": \"Детальная ситуация\", \"loss_amount\": \"Потеря: -18%\"}\n  ],\n  \"process_breakdown\": {\"old_way\": [\"...\"], \"new_way_ai\": [\"...\"]},\n  \"roi_calculator\": {\"hours_saved_per_month\": 120, \"savings_percentage\": 28, \"revenue_uplift_percentage\": 14, \"roi_percentage\": 320, \"payback_period_months\": 1.5},\n  \"software_stack\": [\"...\"],\n  \"comparison_table\": [\n    {\"feature\": \"Скорость ответа\", \"human\": \"5-20 минут\", \"ai\": \"2 секунды\"}\n  ],\n  \"case_study\": {\"title\": \"Публичный кейс\", \"company\": \"\", \"source_url\": \"\", \"is_public\": false, \"story\": \"Короткая история\", \"result_bullet_points\": [\"...\"]},\n  \"meta_description\": \"до 160 символов\"\n}\n\nТребования:\n- pain_points: 5 пунктов.\n- old_way/new_way_ai: по 4-6 шагов.\n- software_stack: 6-8 инструментов, релевантных нише.\n- comparison_table: 4-5 строк.\n- case_study.result_bullet_points: 3-4 пункта.\n- Если кейс публичный и есть источник, заполни company и source_url, is_public = true. Иначе company пустой, is_public = false.\n- Только валидный JSON, без Markdown.`
     }
   ]);
 

@@ -256,6 +256,24 @@ img {
   color: #cfc9ff;
 }
 
+.case-meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.case-meta a {
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.case-note {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
 .card .btn {
   margin-top: 14px;
   display: inline-flex;
