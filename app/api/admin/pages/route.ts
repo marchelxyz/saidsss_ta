@@ -212,8 +212,10 @@ export async function POST(request: Request) {
         | undefined;
       try {
         console.log("[pages] generating image");
+        const rawPrompt = draft.image_prompt;
         const imagePrompt =
-          draft.image_prompt ||
+          (typeof rawPrompt === "string" && rawPrompt.trim()) ||
+          (rawPrompt ? JSON.stringify(rawPrompt) : "") ||
           `Инфографика для ниши: ${niche}. Тема: автоматизация процессов, рост эффективности, AI-помощники, строгий бизнес-стиль, темный фон, акцентные синие/фиолетовые цвета.`;
         const generated = await generateImage(imagePrompt);
         const uploaded = await uploadImageVariants(generated.buffer);
