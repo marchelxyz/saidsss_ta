@@ -349,6 +349,10 @@ export async function POST(request: Request) {
               : `${publicBaseUrl.replace(/\/$/, "")}/p/${slug}`;
         logPageStep(requestId, "screenshot.start", { pageUrl });
         const screenshot = await captureScreenshot(pageUrl);
+        if (!screenshot) {
+          logPageStep(requestId, "screenshot.skipped");
+          return;
+        }
         logPageStep(requestId, "screenshot.captured", { size: screenshot.length });
         const uploaded = await uploadScreenshotVariants(screenshot, pageId);
         logPageStep(requestId, "screenshot.uploaded", uploaded);
@@ -543,6 +547,10 @@ async function processIndustryPageGeneration(params: {
             : `${publicBaseUrl.replace(/\/$/, "")}/p/${slug}`;
       logPageStep(requestId, "screenshot.start", { pageUrl });
       const screenshot = await captureScreenshot(pageUrl);
+      if (!screenshot) {
+        logPageStep(requestId, "screenshot.skipped");
+        return;
+      }
       logPageStep(requestId, "screenshot.captured", { size: screenshot.length });
       const uploaded = await uploadScreenshotVariants(screenshot, pageId);
       logPageStep(requestId, "screenshot.uploaded", uploaded);

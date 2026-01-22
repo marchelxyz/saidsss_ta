@@ -16,7 +16,11 @@ export async function captureScreenshot(url: string) {
   if (provider === "pagespeed") {
     return captureWithPageSpeed(url, apiKey);
   }
-  return captureWithPuppeteer(url, timeoutMs);
+  try {
+    return await captureWithPuppeteer(url, timeoutMs);
+  } catch {
+    return null;
+  }
 }
 
 async function captureWithPageSpeed(url: string, apiKey: string) {
