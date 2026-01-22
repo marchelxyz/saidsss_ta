@@ -42,3 +42,13 @@ export function getS3Config() {
   }
   return { endpoint, region, bucket, accessKeyId, secretAccessKey, publicBaseUrl };
 }
+
+export function getPublicBaseUrl() {
+  return process.env.PUBLIC_BASE_URL ?? "";
+}
+
+export function getScreenshotConfig() {
+  const enabled = process.env.SCREENSHOT_ENABLED === "true";
+  const apiKey = process.env.SCREENSHOT_API_KEY ?? "";
+  return { enabled, apiKey };
+}

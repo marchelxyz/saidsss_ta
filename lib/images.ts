@@ -95,6 +95,7 @@ async function generateWithOpenAI(prompt: string): Promise<GeneratedImage> {
 
 export async function generateImage(prompt: string) {
   const { provider } = getImageConfig();
+  console.log(`[images] generate provider=${provider}`);
   if (provider === "openai") {
     return generateWithOpenAI(prompt);
   }
@@ -116,6 +117,46 @@ export async function uploadImageVariants(buffer: Buffer) {
   const jpg = await sharp(buffer).jpeg({ quality: 80 }).toBuffer();
 
   const basePath = `industry/${id}`;
+  const uploads = [
+    { key: `${basePath}.avif`, body: avif, contentType: "image/avif" },
+    { key: `${basePath}.webp`, body: webp, contentType: "image/webp" },
+    { key: `${basePath}.jpg`, body: jpg, contentType: "image/jpeg" }
+  ];
+
+  for (const file of uploads) {
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: bucket,
+        Key: file.key,
+        Body: file.body,
+        ContentType: file.contentType,
+        ACL: "public-read"
+      })
+    );
+  }
+
+  const baseUrl = publicBaseUrl || `${endpoint.replace(/\/$/, "")}/${bucket}`;
+  return {
+    avifUrl: `${baseUrl}/${basePath}.avif`,
+    webpUrl: `${baseUrl}/${basePath}.webp`,
+    jpgUrl: `${baseUrl}/${basePath}.jpg`
+  };
+}
+
+export async function uploadScreenshotVariants(buffer: Buffer, pageId: string) {
+  const { endpoint, region, bucket, accessKeyId, secretAccessKey, publicBaseUrl } =
+    getS3Config();
+  const s3 = new S3Client({
+    region,
+    endpoint,
+    credentials: { accessKeyId, secretAccessKey }
+  });
+
+  const avif = await sharp(buffer).avif({ quality: 60 }).toBuffer();
+  const webp = await sharp(buffer).webp({ quality: 75 }).toBuffer();
+  const jpg = await sharp(buffer).jpeg({ quality: 75 }).toBuffer();
+
+  const basePath = `screenshots/${pageId}`;
   const uploads = [
     { key: `${basePath}.avif`, body: avif, contentType: "image/avif" },
     { key: `${basePath}.webp`, body: webp, contentType: "image/webp" },
