@@ -187,9 +187,14 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
     <div>
       <div className="admin-toolbar">
         <h1 className="section-title">Редактор страницы</h1>
-        <button className="btn" type="button" onClick={save} disabled={isSaving}>
-          {isSaving ? "Сохраняем..." : "Сохранить"}
-        </button>
+        <div className="admin-actions">
+          <a className="btn btn-secondary" href={`/admin/pages/${page.id}/builder`}>
+            Визуальный редактор
+          </a>
+          <button className="btn" type="button" onClick={save} disabled={isSaving}>
+            {isSaving ? "Сохраняем..." : "Сохранить"}
+          </button>
+        </div>
       </div>
 
       <div className="admin-card admin-form" style={{ marginBottom: 24 }}>
