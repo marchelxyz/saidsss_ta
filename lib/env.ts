@@ -25,7 +25,7 @@ export function getImageConfig() {
   const apiKey = process.env.IMAGE_API_KEY ?? "";
   const apiBase =
     process.env.IMAGE_API_BASE ?? "https://generativelanguage.googleapis.com/v1beta";
-  const model = process.env.IMAGE_MODEL ?? "models/gemini-2.0-flash-image-generation";
+  const model = process.env.IMAGE_MODEL ?? "models/gemini-3-pro-image-preview";
   const provider = process.env.IMAGE_PROVIDER ?? "gemini";
   return { apiKey, apiBase, model, provider };
 }
