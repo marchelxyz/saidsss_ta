@@ -55,7 +55,7 @@ async function captureWithPageSpeed(url: string, apiKey: string) {
 
 async function captureWithPuppeteer(url: string, timeoutMs: number) {
   const browser = await puppeteer.launch({
-    headless: "new",
+    headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"]
   });
 
