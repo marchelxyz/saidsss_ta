@@ -34,6 +34,13 @@ S3_PUBLIC_BASE_URL=https://storage.yandexcloud.net/your-bucket
 PUBLIC_BASE_URL=https://your-domain.com
 SCREENSHOT_ENABLED=false
 SCREENSHOT_API_KEY=your-pagespeed-key
+SEARCH_PROVIDER=tavily_api
+TAVILY_API_KEY=your-tavily-key
+TAVILY_API_BASE=https://api.tavily.com
+TAVILY_SEARCH_DEPTH=basic
+TAVILY_MAX_RESULTS=5
+# Если используете MCP-мост
+TAVILY_MCP_ENDPOINT=http://localhost:8787/tavily/search
 RUN_MIGRATIONS=true
 ```
 
@@ -47,6 +54,23 @@ RUN_MIGRATIONS=true
 - `S3_*` — хранилище изображений (Yandex Object Storage, S3‑совместимое).
 - `PUBLIC_BASE_URL` — базовый URL сайта для генерации скриншотов.
 - `SCREENSHOT_*` — скриншоты страниц через Google PageSpeed Insights (опционально).
+- `SEARCH_PROVIDER`, `TAVILY_*` — поиск в интернете через Tavily (API или MCP).
+
+## Поиск в интернете (Tavily)
+
+В коде доступна функция `searchWeb()` из `lib/search.ts`. Она выбирает провайдера по `SEARCH_PROVIDER`:
+
+### Вариант 1: Tavily API
+
+1. Укажите `SEARCH_PROVIDER=tavily_api`.
+2. Добавьте ключ `TAVILY_API_KEY`.
+3. (Опционально) настройте `TAVILY_API_BASE`, `TAVILY_SEARCH_DEPTH`, `TAVILY_MAX_RESULTS`.
+
+### Вариант 2: Tavily MCP
+
+1. Укажите `SEARCH_PROVIDER=tavily_mcp`.
+2. Настройте HTTP‑мост к MCP серверу Tavily и передайте URL в `TAVILY_MCP_ENDPOINT`.
+3. Мост должен принимать `POST` с полями `query`, `search_depth`, `max_results` и возвращать ответ в формате Tavily (`results[]` с `title`, `url`, `content`).
 
 ## Деплой на Railway (Web + Postgres)
 
