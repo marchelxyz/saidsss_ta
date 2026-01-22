@@ -15,6 +15,7 @@ async function generateWithGemini(prompt: string): Promise<GeneratedImage> {
   }
 
   const normalizedModel = model.startsWith("models/") ? model : `models/${model}`;
+  const safePrompt = typeof prompt === "string" ? prompt : JSON.stringify(prompt);
   console.log(`[images] gemini request model=${normalizedModel}`);
   const response = await fetch(
     `${apiBase}/${normalizedModel}:generateContent?key=${apiKey}`,
@@ -22,7 +23,7 @@ async function generateWithGemini(prompt: string): Promise<GeneratedImage> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [{ role: "user", parts: [{ text: safePrompt }] }],
         generationConfig: {
           response_mime_type: "image/png"
         }
@@ -102,7 +103,7 @@ async function generateWithOpenAI(prompt: string): Promise<GeneratedImage> {
 
 export async function generateImage(prompt: string) {
   const { provider } = getImageConfig();
-  console.log(`[images] generate provider=${provider}`);
+  console.log(`[images] generate provider=${provider}, promptType=${typeof prompt}`);
   if (provider === "openai") {
     return generateWithOpenAI(prompt);
   }
