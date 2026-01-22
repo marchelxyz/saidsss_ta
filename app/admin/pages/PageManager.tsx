@@ -203,6 +203,7 @@ export default function PageManager({ initialPages }: PageManagerProps) {
                 <td>
                   <div className="admin-actions">
                     <Link href={`/admin/pages/${page.id}`}>Редактировать</Link>
+                    <Link href={`/admin/pages/${page.id}/builder`}>Визуально</Link>
                     {page.page_type !== "home" && (
                       <button
                         className="btn btn-secondary"
