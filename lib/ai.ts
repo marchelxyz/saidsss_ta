@@ -159,22 +159,28 @@ const MAS_RULES =
   "Правила: только проценты/доли/индексы/сроки. Никаких валют. Пиши на профессиональном сленге ниши. Реальные компании упоминай только если кейс публичный и проверяемый, иначе обезличенно.";
 
 export async function generateIndustryPageMAS(niche: string) {
+  const startedAt = Date.now();
+  const log = (msg: string) => console.log(`[mas] ${msg}`);
+  log(`start niche="${niche}"`);
   const auditor = await runAgent(
     "Auditor",
     `Ты циничный бизнес-консультант Big4. Ищи потери в нише и считаешь эффект внедрения. ${MAS_RULES} Верни JSON: { pain_points: [{title, description, loss_amount}], roi_calculator: {hours_saved_per_month, savings_percentage, revenue_uplift_percentage, roi_percentage, payback_period_months} }.`,
     { niche }
   );
+  log("auditor done");
 
   let architectDraft = await runAgent(
     "Architect",
     `Ты B2B-маркетолог в инфостиле. Используй данные аудитора. ${MAS_RULES} Верни JSON: { hero, process_breakdown, comparison_table, software_stack, case_study }. В case_study: {title, company, source_url, is_public, story, result_bullet_points}.`,
     { niche, audit: auditor }
   );
+  log("architect done");
 
   let approved = false;
   let criticFeedback = "";
   let attempts = 0;
   while (!approved && attempts < 3) {
+    log(`critic attempt ${attempts + 1}`);
     const critic = await runAgent(
       "Critic",
       `Ты вредный заказчик. Проверяешь логику, цифры, сленг и отсутствие воды. ${MAS_RULES} Верни JSON: { approved: boolean, feedback: string }.`,
@@ -182,14 +188,20 @@ export async function generateIndustryPageMAS(niche: string) {
     );
     approved = Boolean(critic.approved);
     criticFeedback = (critic.feedback as string) ?? "";
+    log(approved ? "critic approved" : `critic feedback: ${criticFeedback}`);
     if (!approved) {
       architectDraft = await runAgent(
         "Architect",
         `Ты B2B-маркетолог в инфостиле. Исправь по фидбеку. ${MAS_RULES} Верни JSON: { hero, process_breakdown, comparison_table, software_stack, case_study }.`,
         { niche, audit: auditor, feedback: criticFeedback, previous_draft: architectDraft }
       );
+      log("architect revised");
     }
     attempts += 1;
+  }
+
+  if (!approved) {
+    log("critic not approved after max attempts, using last draft");
   }
 
   const artDirector = await runAgent(
@@ -197,18 +209,21 @@ export async function generateIndustryPageMAS(niche: string) {
     `Ты арт-директор. Сгенерируй промпт изображения в стиле Dark Tech Corporate, минимализм, неон, темный фон. Верни JSON: { image_prompt }.`,
     { niche, hero: architectDraft.hero }
   );
+  log("art director done");
 
   const growth = await runAgent(
     "GrowthHacker",
     `Ты SEO-специалист. ${MAS_RULES} Верни JSON: { meta_description }.`,
     { niche, draft: architectDraft, audit: auditor }
   );
+  log("growth done");
 
   const uiQa = await runAgent(
     "UIQA",
     `Ты верстальщик. Проверь структуру и длину. Заголовки <= 60 символов, массивы не пустые. Верни исправленный JSON с полями hero, pain_points, process_breakdown, comparison_table, software_stack, case_study.`,
     { niche, draft: architectDraft, audit: auditor }
   );
+  log("ui qa done");
 
   const result: IndustryPageDraft = {
     hero: uiQa.hero as IndustryPageDraft["hero"],
@@ -222,5 +237,6 @@ export async function generateIndustryPageMAS(niche: string) {
     image_prompt: (artDirector.image_prompt as string) ?? ""
   };
 
+  log(`finish in ${Date.now() - startedAt}ms`);
   return result;
 }

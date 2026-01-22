@@ -30,6 +30,9 @@ S3_BUCKET=your-bucket
 S3_ACCESS_KEY=your-access-key
 S3_SECRET_KEY=your-secret-key
 S3_PUBLIC_BASE_URL=https://storage.yandexcloud.net/your-bucket
+PUBLIC_BASE_URL=https://your-domain.com
+SCREENSHOT_ENABLED=false
+SCREENSHOT_API_KEY=your-pagespeed-key
 RUN_MIGRATIONS=true
 ```
 
@@ -41,6 +44,8 @@ RUN_MIGRATIONS=true
 - `AI_API_BASE` и `AI_MODEL` — позволяют использовать другой OpenAI‑совместимый провайдер/модель (по умолчанию `gpt-4o-mini`).
 - `IMAGE_PROVIDER`, `IMAGE_API_KEY`, `IMAGE_API_BASE`, `IMAGE_MODEL` — генерация изображений (Gemini/OpenAI).
 - `S3_*` — хранилище изображений (Yandex Object Storage, S3‑совместимое).
+- `PUBLIC_BASE_URL` — базовый URL сайта для генерации скриншотов.
+- `SCREENSHOT_*` — скриншоты страниц через Google PageSpeed Insights (опционально).
 
 ## Деплой на Railway (Web + Postgres)
 

@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
 import { slugify } from "@/lib/slug";
 import { generateIndustryPageMAS } from "@/lib/ai";
-import { generateImage, uploadImageVariants } from "@/lib/images";
+import { generateImage, uploadImageVariants, uploadScreenshotVariants } from "@/lib/images";
+import { captureScreenshot } from "@/lib/screenshot";
+import { getPublicBaseUrl, getScreenshotConfig } from "@/lib/env";
 import { logAudit } from "@/lib/audit";
 
 type PageCreatePayload = {
@@ -177,6 +179,8 @@ export async function POST(request: Request) {
   const generate = Boolean(body?.generate);
 
   const pool = getPool();
+  const { enabled: screenshotEnabled } = getScreenshotConfig();
+  const publicBaseUrl = getPublicBaseUrl();
 
   await pool.query("begin");
   try {
@@ -196,6 +200,7 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
+      console.log(`[pages] generate industry niche="${niche}"`);
       const draft = await generateIndustryPageMAS(niche);
       let imageData:
         | {
@@ -206,6 +211,7 @@ export async function POST(request: Request) {
           }
         | undefined;
       try {
+        console.log("[pages] generating image");
         const imagePrompt =
           draft.image_prompt ||
           `Инфографика для ниши: ${niche}. Тема: автоматизация процессов, рост эффективности, AI-помощники, строгий бизнес-стиль, темный фон, акцентные синие/фиолетовые цвета.`;
@@ -217,7 +223,9 @@ export async function POST(request: Request) {
           webpUrl: uploaded.webpUrl,
           jpgUrl: uploaded.jpgUrl
         };
+        console.log("[pages] image uploaded");
       } catch {
+        console.log("[pages] image generation failed");
         imageData = undefined;
       }
       pageTitle = draft.hero.title;
@@ -260,6 +268,33 @@ export async function POST(request: Request) {
     });
 
     await pool.query("commit");
+
+    if (screenshotEnabled && publicBaseUrl) {
+      try {
+        const pageUrl =
+          pageType === "home"
+            ? `${publicBaseUrl.replace(/\/$/, "")}/`
+            : pageType === "industry"
+              ? `${publicBaseUrl.replace(/\/$/, "")}/industry/${slug}`
+              : `${publicBaseUrl.replace(/\/$/, "")}/p/${slug}`;
+        console.log(`[pages] screenshot start ${pageUrl}`);
+        const screenshot = await captureScreenshot(pageUrl);
+        const uploaded = await uploadScreenshotVariants(screenshot, pageId);
+        await pool.query(
+          `update site_pages
+           set screenshot_avif_url = $2,
+               screenshot_webp_url = $3,
+               screenshot_jpg_url = $4,
+               updated_at = now()
+           where id = $1`,
+          [pageId, uploaded.avifUrl, uploaded.webpUrl, uploaded.jpgUrl]
+        );
+        console.log("[pages] screenshot saved");
+      } catch (error) {
+        console.log("[pages] screenshot failed", error);
+      }
+    }
+
     return NextResponse.json({ ok: true, id: pageId, slug });
   } catch (error) {
     await pool.query("rollback");

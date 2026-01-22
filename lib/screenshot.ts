@@ -1,0 +1,38 @@
+import { getScreenshotConfig } from "./env";
+
+type PageSpeedResponse = {
+  lighthouseResult?: {
+    audits?: {
+      "final-screenshot"?: {
+        details?: { data?: string };
+      };
+    };
+  };
+};
+
+export async function captureScreenshot(url: string) {
+  const { apiKey } = getScreenshotConfig();
+  const apiUrl = new URL("https://www.googleapis.com/pagespeedonline/v5/runPagespeed");
+  apiUrl.searchParams.set("url", url);
+  apiUrl.searchParams.set("screenshot", "true");
+  if (apiKey) {
+    apiUrl.searchParams.set("key", apiKey);
+  }
+
+  const response = await fetch(apiUrl.toString());
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || "PageSpeed screenshot failed");
+  }
+
+  const data = (await response.json()) as PageSpeedResponse;
+  const screenshotData =
+    data.lighthouseResult?.audits?.["final-screenshot"]?.details?.data;
+
+  if (!screenshotData) {
+    throw new Error("PageSpeed screenshot data not found");
+  }
+
+  const base64 = screenshotData.replace(/^data:image\/\w+;base64,/, "");
+  return Buffer.from(base64, "base64");
+}

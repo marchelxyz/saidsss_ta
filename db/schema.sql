@@ -129,10 +129,20 @@ create table if not exists site_pages (
   page_type text default 'custom',
   niche text,
   meta_description text,
+  screenshot_avif_url text,
+  screenshot_webp_url text,
+  screenshot_jpg_url text,
   published boolean default true,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+alter table site_pages
+  add column if not exists screenshot_avif_url text;
+alter table site_pages
+  add column if not exists screenshot_webp_url text;
+alter table site_pages
+  add column if not exists screenshot_jpg_url text;
 
 create table if not exists site_blocks (
   id uuid primary key default gen_random_uuid(),
