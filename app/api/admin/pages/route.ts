@@ -751,10 +751,10 @@ async function buildCaseStudyFromSearch(params: {
   result_bullet_points: string[];
 } | null> {
   const { requestId, niche } = params;
-  const query = `кейс ${niche} компания результаты`;
+  const query = `кейс ${niche} результаты компании`;
   try {
     logPageStep(requestId, "case.search.start", { query });
-    const response = await searchWeb(query, { searchDepth: "advanced", maxResults: 6 });
+    const response = await searchWeb(query, { searchDepth: "advanced", maxResults: 8 });
     const candidate = pickSearchCase(response.results);
     if (!candidate) {
       logPageStep(requestId, "case.search.empty");
@@ -798,7 +798,10 @@ function pickSearchCase(results: Array<{
       (result) =>
         Boolean(result.url) &&
         Boolean(result.company) &&
-        !isGenericCaseCompany(result.company ?? "")
+        !isGenericCaseCompany(result.company ?? "") &&
+        isLikelyCaseTitle(result.title) &&
+        isLikelyCaseUrl(result.url) &&
+        !isListingContent(result.content)
     );
 
   for (const result of candidates) {
@@ -821,10 +824,13 @@ function pickSearchCase(results: Array<{
 function extractCompanyFromTitle(title: string): string | null {
   const cleaned = title.replace(/["«»]/g, "").trim();
   if (!cleaned) return null;
-  const segment = cleaned.split(/ — | \| | - /)[0]?.trim() ?? "";
-  if (!segment || segment.length < 3) return null;
-  if (/кейс|история|пример/i.test(segment)) return null;
-  return segment;
+  const parts = cleaned.split(/ — | \| | - /).map((part) => part.trim());
+  const first = parts[0] ?? "";
+  const byCase = cleaned.match(/кейс[:\s]+(.+?)(?: — | \| | - |$)/i);
+  const candidate = byCase?.[1]?.trim() ?? first;
+  if (!candidate || candidate.length < 3) return null;
+  if (isGenericCaseTitle(candidate)) return null;
+  return candidate;
 }
 
 function buildStoryFromSnippet(content: string | undefined, title: string): string | null {
@@ -853,4 +859,39 @@ function extractBullets(content: string | undefined): string[] {
     .map((item) => item.trim())
     .filter(Boolean);
   return sentences.slice(0, 3).map((item) => item.replace(/\.$/, ""));
+}
+
+function isLikelyCaseTitle(title: string): boolean {
+  const normalized = title.trim().toLowerCase();
+  if (!normalized) return false;
+  if (isGenericCaseTitle(normalized)) return false;
+  return /кейс|case study|история|результат/i.test(normalized);
+}
+
+function isGenericCaseTitle(value: string): boolean {
+  return /рейтинг|каталог|отзывы|все кейсы|все отзывы|с нами работают|портфолио/i.test(
+    value.toLowerCase()
+  );
+}
+
+function isLikelyCaseUrl(url: string): boolean {
+  const normalized = url.toLowerCase();
+  if (/\/blog\/|\/news\/|\/article\/|\/rating|\/catalog|\/review/.test(normalized)) {
+    return false;
+  }
+  return /case|кейсы|кейc|case-study/.test(normalized);
+}
+
+function isListingContent(content: string | undefined): boolean {
+  if (!content) return true;
+  const normalized = content.toLowerCase();
+  if (
+    /все кейсы|все отзывы|с нами работают|портфолио|кейсы:|отзывы:|каталог/i.test(
+      normalized
+    )
+  ) {
+    return true;
+  }
+  const hashtagCount = (content.match(/#/g) ?? []).length;
+  return hashtagCount >= 3;
 }
