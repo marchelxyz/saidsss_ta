@@ -34,6 +34,12 @@
   padding: 18px;
 }
 
+.admin-hint {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
 .admin-table {
   width: 100%;
   border-collapse: collapse;
@@ -114,6 +120,39 @@
   display: grid;
   gap: 14px;
   max-width: 720px;
+}
+
+.admin-inline {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin-block-list {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-block {
+  background: #0f1219;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  cursor: grab;
+}
+
+.admin-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.admin-block-grid {
+  display: grid;
+  gap: 12px;
 }
 
 .admin-form label {

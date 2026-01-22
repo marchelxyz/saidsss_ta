@@ -29,7 +29,11 @@ const initialState: FormState = {
   message: ""
 };
 
-export default function LeadForm() {
+type LeadFormProps = {
+  sourcePage?: string;
+};
+
+export default function LeadForm({ sourcePage }: LeadFormProps) {
   const [form, setForm] = useState<FormState>(initialState);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string>("");
@@ -65,7 +69,10 @@ export default function LeadForm() {
       const response = await fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form)
+        body: JSON.stringify({
+          ...form,
+          sourcePage: sourcePage ?? ""
+        })
       });
 
       const data = (await response.json().catch(() => ({}))) as {

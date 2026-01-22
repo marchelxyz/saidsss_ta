@@ -14,6 +14,7 @@ type LeadPayload = {
   message?: string;
   budget?: string;
   timeline?: string;
+  sourcePage?: string;
 };
 
 export async function POST(request: Request) {
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
   const message = body?.message?.trim() ?? "";
   const budget = body?.budget?.trim() ?? "";
   const timeline = body?.timeline?.trim() ?? "";
+  const sourcePage = body?.sourcePage?.trim() ?? "";
 
   const adminPassword = getAdminPassword();
   if (adminPassword && name === adminPassword) {
@@ -61,10 +63,10 @@ export async function POST(request: Request) {
   const pool = getPool();
 
   const insertResult = await pool.query(
-    `insert into leads (name, phone, email, company, role, summary, message, budget, timeline, status, analysis_status)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'new', 'pending')
+    `insert into leads (name, phone, email, company, role, summary, message, budget, timeline, source_page, status, analysis_status)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'new', 'pending')
      returning id`,
-    [name, phone, email, company, role, summary, message, budget, timeline]
+    [name, phone, email, company, role, summary, message, budget, timeline, sourcePage]
   );
 
   const leadId = insertResult.rows[0]?.id as string | undefined;

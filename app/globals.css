@@ -183,6 +183,19 @@ img {
   align-items: center;
 }
 
+.builder-image {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  align-items: center;
+}
+
+.builder-image img {
+  width: 100%;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+}
+
 .pill {
   display: inline-flex;
   align-items: center;

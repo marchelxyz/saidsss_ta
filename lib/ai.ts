@@ -105,3 +105,30 @@ export async function draftArticle(input: ArticleDraftRequest) {
 
   return result as ArticleDraftResult;
 }
+
+export type IndustryPageDraft = {
+  title: string;
+  subheadline: string;
+  pain_points: string[];
+  solution: string;
+  metrics: string[];
+  meta_description: string;
+  automation_example: string;
+  why_it_works: string;
+};
+
+export async function draftIndustryPage(niche: string) {
+  const result = await callAi([
+    {
+      role: "system",
+      content:
+        "Ты профессиональный маркетолог и эксперт по автоматизации бизнеса TeleAgent. Напиши контент для посадочной страницы под конкретную нишу. Верни ТОЛЬКО валидный JSON с полями: title, subheadline, pain_points, solution, metrics, meta_description, automation_example, why_it_works."
+    },
+    {
+      role: "user",
+      content: `Ниша: ${niche}.\n\nНапиши структуру лендинга.\n- title: продающий заголовок H1, упоминающий нишу\n- subheadline: подзаголовок с выгодой\n- pain_points: массив из 3 строк, главные боли ниши\n- solution: описание решения от TeleAgent\n- metrics: массив из 2 строк, примерные цифры эффекта\n- meta_description: до 160 символов\n- automation_example: индивидуальный пример автоматизации под нишу\n- why_it_works: объяснение, почему это работает именно здесь\n\nОтветь ТОЛЬКО валидным JSON объектом.`
+    }
+  ]);
+
+  return result as IndustryPageDraft;
+}

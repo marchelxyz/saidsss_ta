@@ -11,6 +11,7 @@ create table if not exists leads (
   message text,
   budget text,
   timeline text,
+  source_page text,
   status text default 'new',
   stage text default 'new',
   notes text,
@@ -117,3 +118,30 @@ create table if not exists site_settings (
 insert into site_settings (id)
 values (1)
 on conflict (id) do nothing;
+
+create table if not exists site_pages (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  slug text unique not null,
+  page_type text default 'custom',
+  niche text,
+  meta_description text,
+  published boolean default true,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create table if not exists site_blocks (
+  id uuid primary key default gen_random_uuid(),
+  page_id uuid references site_pages(id) on delete cascade,
+  block_type text not null,
+  sort_order int default 0,
+  content jsonb default '{}'::jsonb,
+  style jsonb default '{}'::jsonb,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists site_pages_type_idx on site_pages (page_type);
+create index if not exists site_pages_slug_idx on site_pages (slug);
+create index if not exists site_blocks_page_idx on site_blocks (page_id, sort_order);
