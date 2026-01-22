@@ -117,7 +117,7 @@ export async function generateCaseSearchTags(niche: string): Promise<string[]> {
   const tags = Array.isArray((result as any).tags) ? (result as any).tags : [];
   return tags
     .map((tag: unknown) => String(tag ?? "").trim())
-    .filter((tag) => tag.length > 0)
+    .filter((tag: string) => tag.length > 0)
     .slice(0, 8);
 }
 
@@ -184,7 +184,7 @@ export async function refineCaseSearchQuery(params: {
     query: String((parsed as any).query ?? params.previousQuery),
     tags: tags
       .map((tag: unknown) => String(tag ?? "").trim())
-      .filter((tag) => tag.length > 0)
+      .filter((tag: string) => tag.length > 0)
       .slice(0, 8),
     reason: (parsed as any).reason ? String((parsed as any).reason) : undefined
   };
