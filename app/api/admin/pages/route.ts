@@ -20,7 +20,38 @@ function buildIndustryBlocks(draft: {
   metrics: string[];
   automation_example: string;
   why_it_works: string;
+  value_props: string[];
+  process_steps: string[];
+  faq: string[];
+  deliverables: string[];
+  risks: string[];
 }) {
+  const valueProps =
+    draft.value_props?.length > 0
+      ? draft.value_props
+      : ["Снижение ФОТ", "Рост скорости обработки", "Контроль качества", "Прозрачные метрики"];
+  const processSteps =
+    draft.process_steps?.length > 0
+      ? draft.process_steps
+      : [
+          "Аудит всех отделов и потерь",
+          "Карта AI-внедрений и ROI",
+          "Внедрение и интеграции",
+          "Обучение команды"
+        ];
+  const deliverables =
+    draft.deliverables?.length > 0
+      ? draft.deliverables
+      : ["Отчет аудита", "Карта внедрений", "Запущенные автоматизации", "Инструкции"];
+  const risks =
+    draft.risks?.length > 0
+      ? draft.risks
+      : ["Потери на ручных операциях", "Срывы сроков", "Рост затрат"];
+  const faq =
+    draft.faq?.length > 0
+      ? draft.faq
+      : ["В: С чего начать? — О: С аудита всех отделов."];
+
   return [
     {
       block_type: "hero",
@@ -41,12 +72,28 @@ function buildIndustryBlocks(draft: {
       sort_order: 1
     },
     {
+      block_type: "list",
+      content: {
+        title: "Что вы получите",
+        items: deliverables
+      },
+      sort_order: 2
+    },
+    {
       block_type: "text",
       content: {
         title: "Решение TeleAgent",
         text: draft.solution
       },
-      sort_order: 2
+      sort_order: 3
+    },
+    {
+      block_type: "list",
+      content: {
+        title: "Преимущества",
+        items: valueProps
+      },
+      sort_order: 4
     },
     {
       block_type: "text",
@@ -54,7 +101,7 @@ function buildIndustryBlocks(draft: {
         title: "Пример автоматизации",
         text: draft.automation_example
       },
-      sort_order: 3
+      sort_order: 5
     },
     {
       block_type: "text",
@@ -62,7 +109,7 @@ function buildIndustryBlocks(draft: {
         title: "Почему это сработает",
         text: draft.why_it_works
       },
-      sort_order: 4
+      sort_order: 6
     },
     {
       block_type: "list",
@@ -70,7 +117,31 @@ function buildIndustryBlocks(draft: {
         title: "Метрики и эффект",
         items: draft.metrics
       },
-      sort_order: 5
+      sort_order: 7
+    },
+    {
+      block_type: "list",
+      content: {
+        title: "Этапы внедрения",
+        items: processSteps
+      },
+      sort_order: 8
+    },
+    {
+      block_type: "list",
+      content: {
+        title: "Риски без внедрения",
+        items: risks
+      },
+      sort_order: 9
+    },
+    {
+      block_type: "text",
+      content: {
+        title: "FAQ",
+        text: faq.join("\n")
+      },
+      sort_order: 10
     },
     {
       block_type: "contact",
@@ -78,7 +149,7 @@ function buildIndustryBlocks(draft: {
         title: "Обсудим внедрение",
         subtitle: "Оставьте контакты — вернемся с планом аудита."
       },
-      sort_order: 6
+      sort_order: 11
     }
   ];
 }

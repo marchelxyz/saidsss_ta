@@ -115,6 +115,11 @@ export type IndustryPageDraft = {
   meta_description: string;
   automation_example: string;
   why_it_works: string;
+  value_props: string[];
+  process_steps: string[];
+  faq: string[];
+  deliverables: string[];
+  risks: string[];
 };
 
 export async function draftIndustryPage(niche: string) {
@@ -122,11 +127,11 @@ export async function draftIndustryPage(niche: string) {
     {
       role: "system",
       content:
-        "Ты профессиональный маркетолог и эксперт по автоматизации бизнеса TeleAgent. Напиши контент для посадочной страницы под конкретную нишу. Верни ТОЛЬКО валидный JSON с полями: title, subheadline, pain_points, solution, metrics, meta_description, automation_example, why_it_works."
+        "Ты ведущий B2B-маркетолог и бизнес-аналитик TeleAgent. Пиши конкретно, жестко, без воды, упор на деньги, ROI и аудит. Верни ТОЛЬКО валидный JSON с полями: title, subheadline, pain_points, solution, metrics, meta_description, automation_example, why_it_works, value_props, process_steps, faq, deliverables, risks. Запрещены клише и общие фразы."
     },
     {
       role: "user",
-      content: `Ниша: ${niche}.\n\nНапиши структуру лендинга.\n- title: продающий заголовок H1, упоминающий нишу\n- subheadline: подзаголовок с выгодой\n- pain_points: массив из 3 строк, главные боли ниши\n- solution: описание решения от TeleAgent\n- metrics: массив из 2 строк, примерные цифры эффекта\n- meta_description: до 160 символов\n- automation_example: индивидуальный пример автоматизации под нишу\n- why_it_works: объяснение, почему это работает именно здесь\n\nОтветь ТОЛЬКО валидным JSON объектом.`
+      content: `Ниша: ${niche}.\n\nСформируй насыщенный лендинг. Нужны конкретные боли, решения, цифры и результат.\n- title: продающий заголовок H1 с нишей\n- subheadline: подзаголовок с выгодой и обещанием эффекта\n- pain_points: массив из 5 строк, реальные боли ниши\n- solution: 3-5 предложений, как TeleAgent решает\n- metrics: массив из 4 строк, конкретные метрики/эффект\n- meta_description: до 160 символов\n- automation_example: индивидуальный кейс автоматизации под нишу (2-4 предложения)\n- why_it_works: почему это работает именно в этой нише (2-3 предложения)\n- value_props: массив из 5 строк, преимущества для бизнеса\n- process_steps: массив из 4 строк, этапы (Аудит -> Карта -> Внедрение -> Обучение)\n- faq: массив из 4 строк, вопросы/ответы в формате \"В: ... — О: ...\"\n- deliverables: массив из 4 строк, что получит клиент\n- risks: массив из 3 строк, что теряет бизнес без внедрения\n\nОтветь ТОЛЬКО валидным JSON объектом.`
     }
   ]);
 
