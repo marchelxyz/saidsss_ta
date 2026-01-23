@@ -408,6 +408,18 @@ img {
   margin-bottom: 8px;
 }
 
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.footer-links a {
+  color: var(--text);
+  font-size: 14px;
+}
+
 .nav {
   display: flex;
   justify-content: space-between;

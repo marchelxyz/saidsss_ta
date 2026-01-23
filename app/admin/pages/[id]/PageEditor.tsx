@@ -30,6 +30,7 @@ const BLOCK_TYPES = [
   { value: "hero", label: "Hero" },
   { value: "text", label: "Текст" },
   { value: "list", label: "Список" },
+  { value: "faq", label: "FAQ" },
   { value: "image", label: "Изображение" },
   { value: "contact", label: "Контакты" }
 ];
@@ -53,6 +54,18 @@ const buildDefaultBlock = (type: string): BlockData => {
         content: {
           title: "Список преимуществ",
           items: ["Пункт 1", "Пункт 2", "Пункт 3"]
+        },
+        style: { radius: 16 }
+      };
+    case "faq":
+      return {
+        block_type: "faq",
+        content: {
+          title: "FAQ",
+          items: [
+            { question: "Вопрос 1", answer: "Ответ 1" },
+            { question: "Вопрос 2", answer: "Ответ 2" }
+          ]
         },
         style: { radius: 16 }
       };
@@ -94,6 +107,19 @@ const textToList = (value: string) =>
     .split("\n")
     .map((item) => item.trim())
     .filter(Boolean);
+const faqToText = (items?: Array<{ question?: string; answer?: string }>) =>
+  (items ?? [])
+    .map((item) => `${item.question ?? ""} :: ${item.answer ?? ""}`.trim())
+    .join("\n");
+const textToFaq = (value: string) =>
+  value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [question, answer] = line.split("::").map((part) => part.trim());
+      return { question: question ?? "", answer: answer ?? "" };
+    });
 
 export default function PageEditor({ initialPage, initialBlocks }: PageEditorProps) {
   const router = useRouter();
@@ -388,6 +414,23 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
                     value={listToText(block.content.items ?? [])}
                     onChange={(event) =>
                       updateBlockContent(index, "items", textToList(event.target.value))
+                    }
+                  />
+                </>
+              )}
+
+              {block.block_type === "faq" && (
+                <>
+                  <label>Заголовок</label>
+                  <input
+                    value={block.content.title ?? ""}
+                    onChange={(event) => updateBlockContent(index, "title", event.target.value)}
+                  />
+                  <label>Вопросы (формат: Вопрос :: Ответ, каждая пара с новой строки)</label>
+                  <textarea
+                    value={faqToText(block.content.items ?? [])}
+                    onChange={(event) =>
+                      updateBlockContent(index, "items", textToFaq(event.target.value))
                     }
                   />
                 </>

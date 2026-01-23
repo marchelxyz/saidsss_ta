@@ -1,6 +1,8 @@
 import LeadForm from "./components/LeadForm";
 import SiteBlocks from "./components/SiteBlocks";
+import SiteFooter from "./components/SiteFooter";
 import { getPool } from "@/lib/db";
+import { buildNavItemsFromBlocks } from "@/lib/blocks";
 
 export const dynamic = "force-dynamic";
 
@@ -85,7 +87,11 @@ export default async function Home() {
        from cases where published = true
        order by created_at desc`
     ),
-    pool.query(`select telegram, email, phone, address from site_settings where id = 1`),
+    pool.query(
+      `select telegram, email, phone, address, company_name, legal_address, inn, ogrn, kpp,
+              policy_url, vk_url, telegram_url, youtube_url, instagram_url
+       from site_settings where id = 1`
+    ),
     pool.query(`select id from site_pages where slug = 'home' limit 1`)
   ]);
 
@@ -120,6 +126,16 @@ export default async function Home() {
     email?: string | null;
     phone?: string | null;
     address?: string | null;
+    company_name?: string | null;
+    legal_address?: string | null;
+    inn?: string | null;
+    ogrn?: string | null;
+    kpp?: string | null;
+    policy_url?: string | null;
+    vk_url?: string | null;
+    telegram_url?: string | null;
+    youtube_url?: string | null;
+    instagram_url?: string | null;
   };
 
   const contacts = {
@@ -128,6 +144,10 @@ export default async function Home() {
     phone: settings.phone ?? "+7 (999) 000-00-00",
     address: settings.address ?? "Удаленно по РФ и СНГ"
   };
+  const navItems = useBuilder
+    ? buildNavItemsFromBlocks(homeBlocksResult.rows)
+    : [];
+
   return (
     <>
       <header className="container nav">
@@ -135,6 +155,11 @@ export default async function Home() {
         <nav className="nav-links">
           {useBuilder ? (
             <>
+              {navItems.map((item) => (
+                <a key={item.id} href={`#${item.id}`}>
+                  {item.title}
+                </a>
+              ))}
               <a href="#contact">Контакты</a>
             </>
           ) : (
@@ -155,7 +180,13 @@ export default async function Home() {
 
       <main>
         {useBuilder ? (
-          <SiteBlocks blocks={homeBlocksResult.rows} sourcePage="home" />
+          <SiteBlocks
+            blocks={homeBlocksResult.rows}
+            sourcePage="home"
+            contacts={contacts}
+            policyUrl={settings.policy_url ?? null}
+            social={settings}
+          />
         ) : (
           <>
             <section className="hero">
@@ -365,26 +396,7 @@ export default async function Home() {
         )}
       </main>
 
-      <footer className="footer">
-        <div className="container footer-grid">
-          <div>
-            <strong>TeleAgent</strong>
-            <p>Трансформация бизнеса с AI под ключ.</p>
-          </div>
-          <div>
-            <strong>Услуги</strong>
-            <p>Аудит процессов</p>
-            <p>AI-автоматизации</p>
-            <p>Обучение команд</p>
-          </div>
-          <div>
-            <strong>Контакты</strong>
-            <p>Telegram: {contacts.telegram}</p>
-            <p>Email: {contacts.email}</p>
-            <p>Телефон: {contacts.phone}</p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter settings={settings} />
     </>
   );
 }

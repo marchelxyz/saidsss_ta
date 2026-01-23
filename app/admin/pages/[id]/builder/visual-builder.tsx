@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import LeadForm from "@/app/components/LeadForm";
+import { buildNavItemsFromBlocks } from "@/lib/blocks";
 
 type PageData = {
   id: string;
@@ -22,10 +23,115 @@ type BlockData = {
   sort_order?: number;
 };
 
+type BlockOption = {
+  value: string;
+  label: string;
+};
+
+type DragItem = {
+  blockIndex: number;
+  itemIndex: number;
+};
+
 type VisualBuilderProps = {
   initialPage: PageData;
   initialBlocks: BlockData[];
 };
+
+type SettingsData = {
+  telegram?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  company_name?: string | null;
+  legal_address?: string | null;
+  inn?: string | null;
+  ogrn?: string | null;
+  kpp?: string | null;
+  policy_url?: string | null;
+  vk_url?: string | null;
+  telegram_url?: string | null;
+  youtube_url?: string | null;
+  instagram_url?: string | null;
+};
+
+const BLOCK_OPTIONS: BlockOption[] = [
+  { value: "hero", label: "Hero" },
+  { value: "text", label: "Текст" },
+  { value: "list", label: "Список" },
+  { value: "faq", label: "FAQ" },
+  { value: "image", label: "Изображение" },
+  { value: "contact", label: "Контакты" }
+];
+
+/**
+ * Build a default block structure for the visual builder.
+ */
+function buildDefaultBlock(type: string): BlockData {
+  switch (type) {
+    case "hero":
+      return {
+        block_type: "hero",
+        content: {
+          title: "Заголовок",
+          subtitle: "Подзаголовок",
+          button_text: "Получить аудит",
+          button_link: "#contact"
+        },
+        style: { radius: 18 }
+      };
+    case "list":
+      return {
+        block_type: "list",
+        content: {
+          title: "Список",
+          items: ["Пункт 1", "Пункт 2", "Пункт 3"]
+        },
+        style: { radius: 16 }
+      };
+    case "faq":
+      return {
+        block_type: "faq",
+        content: {
+          title: "FAQ",
+          items: [
+            { question: "Вопрос 1", answer: "Ответ 1" },
+            { question: "Вопрос 2", answer: "Ответ 2" }
+          ]
+        },
+        style: { radius: 16 }
+      };
+    case "image":
+      return {
+        block_type: "image",
+        content: {
+          title: "Блок с изображением",
+          text: "Описание блока",
+          image_url: ""
+        },
+        style: { radius: 16 }
+      };
+    case "contact":
+      return {
+        block_type: "contact",
+        content: {
+          title: "Обсудим проект",
+          subtitle: "Оставьте контакты — вернемся с планом аудита."
+        },
+        style: { radius: 16 }
+      };
+    case "text":
+    default:
+      return {
+        block_type: "text",
+        content: {
+          title: "Заголовок секции",
+          text: "Текст блока"
+        },
+        style: { radius: 16 }
+      };
+  }
+}
 
 export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuilderProps) {
   const router = useRouter();
@@ -37,15 +143,35 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
     }))
   );
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragItem, setDragItem] = useState<DragItem | null>(null);
+  const [newBlockType, setNewBlockType] = useState("text");
   const [isSaving, setIsSaving] = useState(false);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
   const [generateError, setGenerateError] = useState<string>("");
+  const [blockGeneratingIndex, setBlockGeneratingIndex] = useState<number | null>(null);
+  const [blockGenerateError, setBlockGenerateError] = useState<string>("");
+  const [settings, setSettings] = useState<SettingsData | null>(null);
 
   const sortedBlocks = useMemo(
     () => [...blocks].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
     [blocks]
   );
+  const navItems = useMemo(() => buildNavItemsFromBlocks(sortedBlocks), [sortedBlocks]);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      const response = await fetch("/api/admin/settings");
+      if (!response.ok) return;
+      const data = (await response.json().catch(() => ({}))) as {
+        settings?: SettingsData;
+      };
+      if (data.settings) {
+        setSettings(data.settings);
+      }
+    };
+    loadSettings().catch(() => undefined);
+  }, []);
 
   const updateBlockContent = (index: number, key: string, value: unknown) => {
     setBlocks((prev) =>
@@ -67,6 +193,17 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
     );
   };
 
+  const addBlock = () => {
+    setBlocks((prev) => [
+      ...prev,
+      { ...buildDefaultBlock(newBlockType), sort_order: prev.length }
+    ]);
+  };
+
+  const removeBlock = (index: number) => {
+    setBlocks((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
   const handleDrop = (index: number) => {
     if (dragIndex === null || dragIndex === index) return;
     setBlocks((prev) => {
@@ -76,6 +213,25 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
       return updated.map((block, idx) => ({ ...block, sort_order: idx }));
     });
     setDragIndex(null);
+  };
+
+  const moveBlockItem = (blockIndex: number, fromIndex: number, toIndex: number) => {
+    setBlocks((prev) =>
+      prev.map((block, idx) => {
+        if (idx !== blockIndex) return block;
+        const items = [...(block.content.items ?? [])];
+        const [moved] = items.splice(fromIndex, 1);
+        items.splice(toIndex, 0, moved);
+        return { ...block, content: { ...block.content, items } };
+      })
+    );
+  };
+
+  const handleItemDrop = (blockIndex: number, itemIndex: number) => {
+    if (!dragItem || dragItem.blockIndex !== blockIndex) return;
+    if (dragItem.itemIndex === itemIndex) return;
+    moveBlockItem(blockIndex, dragItem.itemIndex, itemIndex);
+    setDragItem(null);
   };
 
   const generateImageForBlock = async (index: number) => {
@@ -106,6 +262,41 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
       updateBlockContent(index, "image_url", data.urls.jpg ?? "");
     } finally {
       setGeneratingIndex((current) => (current === index ? null : current));
+    }
+  };
+
+  const generateTextForBlock = async (index: number) => {
+    const block = blocks[index];
+    if (!block) return;
+    setBlockGeneratingIndex(index);
+    setBlockGenerateError("");
+    try {
+      const response = await fetch("/api/admin/ai/block-content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          blockType: block.block_type,
+          pageTitle: page.title,
+          niche: page.niche,
+          content: block.content
+        })
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        ok?: boolean;
+        content?: Record<string, unknown>;
+        message?: string;
+      };
+      if (!response.ok || !data.ok || !data.content) {
+        setBlockGenerateError(data.message ?? "Не удалось сгенерировать текст.");
+        return;
+      }
+      setBlocks((prev) =>
+        prev.map((item, idx) =>
+          idx === index ? { ...item, content: { ...item.content, ...data.content } } : item
+        )
+      );
+    } finally {
+      setBlockGeneratingIndex((current) => (current === index ? null : current));
     }
   };
 
@@ -144,6 +335,20 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
           <span className="builder-hint">Визуальный редактор</span>
         </div>
         <div className="builder-actions">
+          <select
+            className="builder-input"
+            value={newBlockType}
+            onChange={(event) => setNewBlockType(event.target.value)}
+          >
+            {BLOCK_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <button className="btn btn-secondary" type="button" onClick={addBlock}>
+            Добавить блок
+          </button>
           <input
             className="builder-input"
             value={page.title}
@@ -163,6 +368,11 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
         <header className="container nav">
           <strong>TeleAgent</strong>
           <nav className="nav-links">
+            {navItems.map((item) => (
+              <a key={item.id} href={`#${item.id}`}>
+                {item.title}
+              </a>
+            ))}
             <a href="#contact">Контакты</a>
           </nav>
           <a className="btn btn-secondary" href="#contact">
@@ -243,6 +453,25 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                           </span>
                         </a>
                       </div>
+                      <input
+                        className="builder-input"
+                        value={block.content.button_link ?? "#contact"}
+                        onChange={(event) =>
+                          updateBlockContent(index, "button_link", event.target.value)
+                        }
+                        placeholder="Ссылка кнопки"
+                      />
+                      <button
+                        className="btn btn-secondary builder-inline-button"
+                        type="button"
+                        onClick={() => generateTextForBlock(index)}
+                        disabled={blockGeneratingIndex === index}
+                      >
+                        {blockGeneratingIndex === index ? "Генерируем..." : "AI заполнить"}
+                      </button>
+                      {blockGenerateError && blockGeneratingIndex === index && (
+                        <p className="error">{blockGenerateError}</p>
+                      )}
                     </div>
                     <div className="card" style={cardStyle}>
                       <strong>TeleAgent</strong>
@@ -279,6 +508,17 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                     >
                       {block.content.text}
                     </p>
+                    <button
+                      className="btn btn-secondary builder-inline-button"
+                      type="button"
+                      onClick={() => generateTextForBlock(index)}
+                      disabled={blockGeneratingIndex === index}
+                    >
+                      {blockGeneratingIndex === index ? "Генерируем..." : "AI заполнить"}
+                    </button>
+                    {blockGenerateError && blockGeneratingIndex === index && (
+                      <p className="error">{blockGenerateError}</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -300,7 +540,18 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                     </h2>
                     <div className="grid">
                       {(block.content.items ?? []).map((item: string, itemIndex: number) => (
-                        <div className="card" style={cardStyle} key={`item-${itemIndex}`}>
+                        <div
+                          className="card builder-item"
+                          style={cardStyle}
+                          key={`item-${itemIndex}`}
+                          draggable
+                          onDragStart={() => setDragItem({ blockIndex: index, itemIndex })}
+                          onDragOver={(event) => event.preventDefault()}
+                          onDrop={() => handleItemDrop(index, itemIndex)}
+                        >
+                          <div className="builder-item-handle" title="Перетащить">
+                            ⋮⋮
+                          </div>
                           <p
                             className="builder-editable"
                             contentEditable={
@@ -333,6 +584,118 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                     >
                       Добавить пункт
                     </button>
+                    <button
+                      className="btn btn-secondary builder-inline-button"
+                      type="button"
+                      onClick={() => generateTextForBlock(index)}
+                      disabled={blockGeneratingIndex === index}
+                    >
+                      {blockGeneratingIndex === index ? "Генерируем..." : "AI заполнить"}
+                    </button>
+                    {blockGenerateError && blockGeneratingIndex === index && (
+                      <p className="error">{blockGenerateError}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {block.block_type === "faq" && (
+                <div className="section builder-live">
+                  <div className="container">
+                    <h2
+                      className="section-title builder-editable"
+                      contentEditable={editingKey === `${keyBase}-faq-title`}
+                      suppressContentEditableWarning
+                      onDoubleClick={() => setEditingKey(`${keyBase}-faq-title`)}
+                      onBlur={(event) => {
+                        updateBlockContent(index, "title", event.currentTarget.textContent ?? "");
+                        setEditingKey(null);
+                      }}
+                    >
+                      {block.content.title}
+                    </h2>
+                    <div className="faq">
+                      {(block.content.items ?? []).map(
+                        (item: { question?: string; answer?: string }, itemIndex: number) => (
+                          <div
+                            className="card builder-item"
+                            key={`faq-${itemIndex}`}
+                            draggable
+                            onDragStart={() => setDragItem({ blockIndex: index, itemIndex })}
+                            onDragOver={(event) => event.preventDefault()}
+                            onDrop={() => handleItemDrop(index, itemIndex)}
+                          >
+                            <div className="builder-item-handle" title="Перетащить">
+                              ⋮⋮
+                            </div>
+                            <strong
+                              className="builder-editable"
+                              contentEditable={
+                                editingKey === `${keyBase}-faq-q-${itemIndex}`
+                              }
+                              suppressContentEditableWarning
+                              onDoubleClick={() =>
+                                setEditingKey(`${keyBase}-faq-q-${itemIndex}`)
+                              }
+                              onBlur={(event) => {
+                                const updated = [...(block.content.items ?? [])];
+                                updated[itemIndex] = {
+                                  ...updated[itemIndex],
+                                  question: event.currentTarget.textContent ?? ""
+                                };
+                                updateBlockContent(index, "items", updated);
+                                setEditingKey(null);
+                              }}
+                            >
+                              {item.question}
+                            </strong>
+                            <p
+                              className="builder-editable"
+                              contentEditable={
+                                editingKey === `${keyBase}-faq-a-${itemIndex}`
+                              }
+                              suppressContentEditableWarning
+                              onDoubleClick={() =>
+                                setEditingKey(`${keyBase}-faq-a-${itemIndex}`)
+                              }
+                              onBlur={(event) => {
+                                const updated = [...(block.content.items ?? [])];
+                                updated[itemIndex] = {
+                                  ...updated[itemIndex],
+                                  answer: event.currentTarget.textContent ?? ""
+                                };
+                                updateBlockContent(index, "items", updated);
+                                setEditingKey(null);
+                              }}
+                            >
+                              {item.answer}
+                            </p>
+                          </div>
+                        )
+                      )}
+                    </div>
+                    <button
+                      className="btn btn-secondary builder-inline-button"
+                      type="button"
+                      onClick={() => {
+                        const updated = [...(block.content.items ?? [])];
+                        updated.push({ question: "Новый вопрос", answer: "Новый ответ" });
+                        updateBlockContent(index, "items", updated);
+                      }}
+                    >
+                      Добавить вопрос
+                    </button>
+                    <button
+                      className="btn btn-secondary builder-inline-button"
+                      type="button"
+                      onClick={() => generateTextForBlock(index)}
+                      disabled={blockGeneratingIndex === index}
+                    >
+                      {blockGeneratingIndex === index ? "Генерируем..." : "AI заполнить"}
+                    </button>
+                    {blockGenerateError && blockGeneratingIndex === index && (
+                      <p className="error">{blockGenerateError}</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -453,6 +816,17 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                     <div className="card" style={cardStyle}>
                       <LeadForm sourcePage={page.slug} />
                     </div>
+                    <button
+                      className="btn btn-secondary builder-inline-button"
+                      type="button"
+                      onClick={() => generateTextForBlock(index)}
+                      disabled={blockGeneratingIndex === index}
+                    >
+                      {blockGeneratingIndex === index ? "Генерируем..." : "AI заполнить"}
+                    </button>
+                    {blockGenerateError && blockGeneratingIndex === index && (
+                      <p className="error">{blockGenerateError}</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -466,11 +840,84 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                     updateBlockStyle(index, "radius", Number(event.target.value))
                   }
                 />
+                <button
+                  className="btn btn-secondary builder-inline-button"
+                  type="button"
+                  onClick={() => removeBlock(index)}
+                >
+                  Удалить
+                </button>
               </div>
             </section>
           );
         })}
+        {settings && (
+          <footer className="footer">
+            <div className="container footer-grid">
+              <div>
+                <strong>TeleAgent</strong>
+                <p>Трансформация бизнеса с AI под ключ.</p>
+              </div>
+              <div>
+                <strong>Контакты</strong>
+                {settings.telegram && <p>Telegram: {settings.telegram}</p>}
+                {settings.email && <p>Email: {settings.email}</p>}
+                {settings.phone && <p>Телефон: {settings.phone}</p>}
+                {settings.address && <p>Адрес: {settings.address}</p>}
+                {buildPreviewLinks(settings).length > 0 && (
+                  <div className="footer-links">
+                    {buildPreviewLinks(settings).map((item) => (
+                      <a key={item.label} href={item.href} target="_blank" rel="noreferrer">
+                        {item.label}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div>
+                <strong>Реквизиты</strong>
+                {settings.company_name && <p>{settings.company_name}</p>}
+                {settings.legal_address && <p>{settings.legal_address}</p>}
+                {settings.inn && <p>ИНН: {settings.inn}</p>}
+                {settings.kpp && <p>КПП: {settings.kpp}</p>}
+                {settings.ogrn && <p>ОГРН: {settings.ogrn}</p>}
+                {settings.policy_url && (
+                  <div className="footer-links">
+                    <a href={settings.policy_url} target="_blank" rel="noreferrer">
+                      Политика обработки персональных данных
+                    </a>
+                  </div>
+                )}
+              </div>
+            </div>
+          </footer>
+        )}
       </main>
     </div>
   );
+}
+
+type PreviewLink = {
+  label: string;
+  href: string;
+};
+
+/**
+ * Build social links for the footer preview.
+ */
+function buildPreviewLinks(settings: SettingsData): PreviewLink[] {
+  const links: PreviewLink[] = [];
+  if (settings.telegram_url) {
+    links.push({ label: "Telegram", href: settings.telegram_url });
+  }
+  if (settings.vk_url) {
+    links.push({ label: "VK", href: settings.vk_url });
+  }
+  if (settings.youtube_url) {
+    links.push({ label: "YouTube", href: settings.youtube_url });
+  }
+  if (settings.instagram_url) {
+    links.push({ label: "Instagram", href: settings.instagram_url });
+  }
+  return links;
 }
