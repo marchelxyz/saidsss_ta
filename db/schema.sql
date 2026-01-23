@@ -127,6 +127,16 @@ create table if not exists site_settings (
   email text,
   phone text,
   address text,
+  company_name text,
+  legal_address text,
+  inn text,
+  ogrn text,
+  kpp text,
+  policy_url text,
+  vk_url text,
+  telegram_url text,
+  youtube_url text,
+  instagram_url text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -134,6 +144,27 @@ create table if not exists site_settings (
 insert into site_settings (id)
 values (1)
 on conflict (id) do nothing;
+
+alter table site_settings
+  add column if not exists company_name text;
+alter table site_settings
+  add column if not exists legal_address text;
+alter table site_settings
+  add column if not exists inn text;
+alter table site_settings
+  add column if not exists ogrn text;
+alter table site_settings
+  add column if not exists kpp text;
+alter table site_settings
+  add column if not exists policy_url text;
+alter table site_settings
+  add column if not exists vk_url text;
+alter table site_settings
+  add column if not exists telegram_url text;
+alter table site_settings
+  add column if not exists youtube_url text;
+alter table site_settings
+  add column if not exists instagram_url text;
 
 create table if not exists site_pages (
   id uuid primary key default gen_random_uuid(),

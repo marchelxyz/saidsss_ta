@@ -42,6 +42,13 @@ export type CaseSearchQueryRefinement = {
   reason?: string;
 };
 
+export type BlockContentDraftParams = {
+  blockType: string;
+  pageTitle?: string | null;
+  niche?: string | null;
+  content?: Record<string, unknown>;
+};
+
 async function callAi(messages: Array<{ role: string; content: string }>) {
   const { apiKey, apiBase, model } = getAiConfig();
   if (!apiKey) {
@@ -187,6 +194,107 @@ export async function refineCaseSearchQuery(params: {
       .filter((tag: string) => tag.length > 0)
       .slice(0, 8),
     reason: (parsed as any).reason ? String((parsed as any).reason) : undefined
+  };
+}
+
+/**
+ * Generate draft content for a visual builder block.
+ */
+export async function generateBlockContent(
+  params: BlockContentDraftParams
+): Promise<Record<string, unknown>> {
+  const blockType = params.blockType.trim();
+  const schema = describeBlockSchema(blockType);
+  const result = await callAi([
+    {
+      role: "system",
+      content:
+        "Ты копирайтер TeleAgent. Верни JSON: { content: {...} }. " +
+        "Текст на русском, без воды, 3-5 предложений максимум, без лишних кавычек."
+    },
+    {
+      role: "user",
+      content: JSON.stringify(
+        {
+          block_type: blockType,
+          page_title: params.pageTitle ?? "",
+          niche: params.niche ?? "",
+          current_content: params.content ?? {},
+          schema
+        },
+        null,
+        2
+      )
+    }
+  ]);
+
+  const rawContent = (result as any).content as Record<string, unknown> | undefined;
+  return normalizeBlockContent(blockType, rawContent ?? {});
+}
+
+/**
+ * Describe expected schema for a block type.
+ */
+function describeBlockSchema(blockType: string): string {
+  switch (blockType) {
+    case "hero":
+      return "title: string, subtitle: string, button_text: string, button_link: string";
+    case "list":
+      return "title: string, items: string[]";
+    case "faq":
+      return "title: string, items: {question: string, answer: string}[]";
+    case "contact":
+      return "title: string, subtitle: string";
+    case "text":
+    default:
+      return "title: string, text: string";
+  }
+}
+
+/**
+ * Normalize AI block content by type.
+ */
+function normalizeBlockContent(
+  blockType: string,
+  content: Record<string, unknown>
+): Record<string, unknown> {
+  if (blockType === "hero") {
+    return {
+      title: String(content.title ?? ""),
+      subtitle: String(content.subtitle ?? ""),
+      button_text: String(content.button_text ?? "Получить аудит"),
+      button_link: String(content.button_link ?? "#contact")
+    };
+  }
+  if (blockType === "list") {
+    return {
+      title: String(content.title ?? ""),
+      items: Array.isArray(content.items)
+        ? content.items.map((item) => String(item ?? "").trim()).filter(Boolean)
+        : []
+    };
+  }
+  if (blockType === "faq") {
+    const items = Array.isArray(content.items) ? content.items : [];
+    return {
+      title: String(content.title ?? ""),
+      items: items
+        .map((item) => ({
+          question: String((item as any)?.question ?? "").trim(),
+          answer: String((item as any)?.answer ?? "").trim()
+        }))
+        .filter((item) => item.question || item.answer)
+    };
+  }
+  if (blockType === "contact") {
+    return {
+      title: String(content.title ?? ""),
+      subtitle: String(content.subtitle ?? "")
+    };
+  }
+  return {
+    title: String(content.title ?? ""),
+    text: String(content.text ?? "")
   };
 }
 

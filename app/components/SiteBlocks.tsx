@@ -11,13 +11,58 @@ type SiteBlock = {
 type SiteBlocksProps = {
   blocks: SiteBlock[];
   sourcePage?: string;
+  contacts?: {
+    telegram?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+  };
+  policyUrl?: string | null;
+  social?: {
+    vk_url?: string | null;
+    telegram_url?: string | null;
+    youtube_url?: string | null;
+    instagram_url?: string | null;
+  };
 };
 
-export default function SiteBlocks({ blocks, sourcePage }: SiteBlocksProps) {
+type SocialLink = {
+  label: string;
+  href: string;
+};
+
+/**
+ * Build social links list from settings data.
+ */
+function buildSocialLinks(social?: SiteBlocksProps["social"]): SocialLink[] {
+  const links: SocialLink[] = [];
+  if (social?.telegram_url) {
+    links.push({ label: "Telegram", href: social.telegram_url });
+  }
+  if (social?.vk_url) {
+    links.push({ label: "VK", href: social.vk_url });
+  }
+  if (social?.youtube_url) {
+    links.push({ label: "YouTube", href: social.youtube_url });
+  }
+  if (social?.instagram_url) {
+    links.push({ label: "Instagram", href: social.instagram_url });
+  }
+  return links;
+}
+
+export default function SiteBlocks({
+  blocks,
+  sourcePage,
+  contacts,
+  policyUrl,
+  social
+}: SiteBlocksProps) {
   const getSectionId = (title?: string, fallback?: string) => {
     const base = title?.toString().trim() || fallback || "";
     return base ? slugify(base) : undefined;
   };
+  const socialLinks = buildSocialLinks(social);
 
   return (
     <>
@@ -56,6 +101,29 @@ export default function SiteBlocks({ blocks, sourcePage }: SiteBlocksProps) {
               <div className="container">
                 <h2 className="section-title">{block.content.title}</h2>
                 <p className="section-subtitle">{block.content.text}</p>
+              </div>
+            </section>
+          );
+        }
+
+        if (block.block_type === "faq") {
+          const items = (block.content.items ?? []) as Array<{
+            question?: string;
+            answer?: string;
+          }>;
+          const sectionId = getSectionId(block.content.title as string | undefined);
+          return (
+            <section className="section" key={`faq-${index}`} id={sectionId}>
+              <div className="container">
+                <h2 className="section-title">{block.content.title}</h2>
+                <div className="faq">
+                  {items.map((item, itemIndex) => (
+                    <details key={`faq-${itemIndex}`}>
+                      <summary>{item.question}</summary>
+                      <p>{item.answer}</p>
+                    </details>
+                  ))}
+                </div>
               </div>
             </section>
           );
@@ -300,13 +368,47 @@ export default function SiteBlocks({ blocks, sourcePage }: SiteBlocksProps) {
         }
 
         if (block.block_type === "contact") {
+          const hasContacts =
+            Boolean(contacts?.telegram) ||
+            Boolean(contacts?.email) ||
+            Boolean(contacts?.phone) ||
+            Boolean(contacts?.address) ||
+            socialLinks.length > 0 ||
+            Boolean(policyUrl);
           return (
             <section className="section" id="contact" key={`contact-${index}`}>
               <div className="container">
                 <h2 className="section-title">{block.content.title}</h2>
                 <p className="section-subtitle">{block.content.subtitle}</p>
-                <div className="card" style={cardStyle}>
-                  <LeadForm sourcePage={sourcePage} />
+                <div className="grid">
+                  <div className="card" style={cardStyle}>
+                    <LeadForm sourcePage={sourcePage} />
+                  </div>
+                  {hasContacts && (
+                    <div className="card" style={cardStyle}>
+                      <h3>Контакты</h3>
+                      {contacts?.telegram && <p>Telegram: {contacts.telegram}</p>}
+                      {contacts?.email && <p>Email: {contacts.email}</p>}
+                      {contacts?.phone && <p>Телефон: {contacts.phone}</p>}
+                      {contacts?.address && <p>Адрес: {contacts.address}</p>}
+                      {socialLinks.length > 0 && (
+                        <div className="footer-links">
+                          {socialLinks.map((item) => (
+                            <a key={item.label} href={item.href} target="_blank" rel="noreferrer">
+                              {item.label}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                      {policyUrl && (
+                        <div className="footer-links" style={{ marginTop: 12 }}>
+                          <a href={policyUrl} target="_blank" rel="noreferrer">
+                            Политика обработки персональных данных
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </section>

@@ -7,7 +7,9 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const pool = getPool();
   const result = await pool.query(
-    `select telegram, email, phone, address from site_settings where id = 1`
+    `select telegram, email, phone, address, company_name, legal_address, inn, ogrn, kpp,
+            policy_url, vk_url, telegram_url, youtube_url, instagram_url
+     from site_settings where id = 1`
   );
 
   return (

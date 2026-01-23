@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getPool } from "@/lib/db";
 import SiteBlocks from "@/app/components/SiteBlocks";
+import SiteFooter from "@/app/components/SiteFooter";
 import { slugify } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
@@ -28,13 +29,20 @@ export async function generateMetadata({ params }: PageParams) {
 
 export default async function CustomPage({ params }: PageParams) {
   const pool = getPool();
-  const pageResult = await pool.query(
-    `select id
-     from site_pages
-     where slug = $1 and page_type = 'custom' and published = true
-     limit 1`,
-    [params.slug]
-  );
+  const [pageResult, settingsResult] = await Promise.all([
+    pool.query(
+      `select id
+       from site_pages
+       where slug = $1 and page_type = 'custom' and published = true
+       limit 1`,
+      [params.slug]
+    ),
+    pool.query(
+      `select telegram, email, phone, address, company_name, legal_address, inn, ogrn, kpp,
+              policy_url, vk_url, telegram_url, youtube_url, instagram_url
+       from site_settings where id = 1`
+    )
+  ]);
   const page = pageResult.rows[0];
   if (!page) return notFound();
 
@@ -54,6 +62,22 @@ export default async function CustomPage({ params }: PageParams) {
     }))
     .filter((item) => item.title && item.id)
     .slice(0, 6);
+  const settings = (settingsResult.rows[0] ?? {}) as {
+    telegram?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    company_name?: string | null;
+    legal_address?: string | null;
+    inn?: string | null;
+    ogrn?: string | null;
+    kpp?: string | null;
+    policy_url?: string | null;
+    vk_url?: string | null;
+    telegram_url?: string | null;
+    youtube_url?: string | null;
+    instagram_url?: string | null;
+  };
 
   return (
     <>
@@ -72,16 +96,15 @@ export default async function CustomPage({ params }: PageParams) {
         </a>
       </header>
       <main>
-        <SiteBlocks blocks={blocksResult.rows} sourcePage={params.slug} />
+        <SiteBlocks
+          blocks={blocksResult.rows}
+          sourcePage={params.slug}
+          contacts={settings}
+          policyUrl={settings.policy_url ?? null}
+          social={settings}
+        />
       </main>
-      <footer className="footer">
-        <div className="container footer-grid">
-          <div>
-            <strong>TeleAgent</strong>
-            <p>Трансформация бизнеса с AI под ключ.</p>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter settings={settings} />
     </>
   );
 }
