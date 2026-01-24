@@ -173,6 +173,51 @@ export default function SiteBlocks({
           );
         }
 
+        if (block.block_type === "process_map") {
+          const sectionId = getSectionId(block.content.title as string | undefined);
+          const steps = (block.content.steps ?? []) as Array<{
+            title?: string;
+            subtitle?: string;
+            items?: string[];
+          }>;
+          const result = (block.content.result ?? null) as
+            | { title?: string; subtitle?: string }
+            | null;
+          return (
+            <section className="section process-map" key={`process-map-${index}`} id={sectionId}>
+              <div className="container">
+                <h2 className="section-title">{block.content.title}</h2>
+                <div className="process-map-track">
+                  {steps.map((step, stepIndex) => (
+                    <div className="process-step" key={`process-step-${stepIndex}`}>
+                      <div className="process-node">
+                        <span className="process-index">{stepIndex + 1}</span>
+                        <h3>{step.title}</h3>
+                        <p>{step.subtitle}</p>
+                      </div>
+                      {(step.items ?? []).length > 0 && (
+                        <div className="process-substeps">
+                          {(step.items ?? []).map((item, itemIndex) => (
+                            <div className="process-substep" key={`process-sub-${itemIndex}`}>
+                              {item}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {result && (
+                  <div className="process-result">
+                    <h3>{result.title}</h3>
+                    <p>{result.subtitle}</p>
+                  </div>
+                )}
+              </div>
+            </section>
+          );
+        }
+
         if (block.block_type === "process_compare") {
           const sectionId = getSectionId(block.content.title as string | undefined);
           const oldWay = (block.content.old_way ?? []) as string[];

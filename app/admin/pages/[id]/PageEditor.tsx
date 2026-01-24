@@ -31,6 +31,7 @@ const BLOCK_TYPES = [
   { value: "text", label: "Текст" },
   { value: "list", label: "Список" },
   { value: "faq", label: "FAQ" },
+  { value: "process_map", label: "Процесс (схема)" },
   { value: "image", label: "Изображение" },
   { value: "contact", label: "Контакты" }
 ];
@@ -69,6 +70,21 @@ const buildDefaultBlock = (type: string): BlockData => {
         },
         style: { radius: 16 }
       };
+    case "process_map":
+      return {
+        block_type: "process_map",
+        content: {
+          title: "Как выглядит процесс",
+          steps: [
+            { title: "Шаг 1", subtitle: "Короткое пояснение", items: ["Подшаг 1"] }
+          ],
+          result: {
+            title: "Результат",
+            subtitle: "Автоматизированный бизнес"
+          }
+        },
+        style: { radius: 16 }
+      };
     case "image":
       return {
         block_type: "image",
@@ -101,18 +117,25 @@ const buildDefaultBlock = (type: string): BlockData => {
   }
 };
 
-const listToText = (items?: string[]) => (items ?? []).join("\n");
-const textToList = (value: string) =>
-  value
+function listToText(items?: string[]) {
+  return (items ?? []).join("\n");
+}
+
+function textToList(value: string) {
+  return value
     .split("\n")
     .map((item) => item.trim())
     .filter(Boolean);
-const faqToText = (items?: Array<{ question?: string; answer?: string }>) =>
-  (items ?? [])
+}
+
+function faqToText(items?: Array<{ question?: string; answer?: string }>) {
+  return (items ?? [])
     .map((item) => `${item.question ?? ""} :: ${item.answer ?? ""}`.trim())
     .join("\n");
-const textToFaq = (value: string) =>
-  value
+}
+
+function textToFaq(value: string) {
+  return value
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
@@ -120,6 +143,32 @@ const textToFaq = (value: string) =>
       const [question, answer] = line.split("::").map((part) => part.trim());
       return { question: question ?? "", answer: answer ?? "" };
     });
+}
+
+function processStepsToText(
+  steps?: Array<{ title?: string; subtitle?: string; items?: string[] }>
+) {
+  return (steps ?? [])
+    .map((step) => {
+      const items = (step.items ?? []).join(" | ");
+      return `${step.title ?? ""} :: ${step.subtitle ?? ""} :: ${items}`.trim();
+    })
+    .join("\n");
+}
+
+function textToProcessSteps(value: string) {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [title, subtitle, itemsText] = line.split("::").map((part) => part.trim());
+      const items = itemsText
+        ? itemsText.split("|").map((item) => item.trim()).filter(Boolean)
+        : [];
+      return { title: title ?? "", subtitle: subtitle ?? "", items };
+    });
+}
 
 export default function PageEditor({ initialPage, initialBlocks }: PageEditorProps) {
   const router = useRouter();
@@ -431,6 +480,43 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
                     value={faqToText(block.content.items ?? [])}
                     onChange={(event) =>
                       updateBlockContent(index, "items", textToFaq(event.target.value))
+                    }
+                  />
+                </>
+              )}
+
+              {block.block_type === "process_map" && (
+                <>
+                  <label>Заголовок</label>
+                  <input
+                    value={block.content.title ?? ""}
+                    onChange={(event) => updateBlockContent(index, "title", event.target.value)}
+                  />
+                  <label>Шаги (формат: Шаг :: Подзаголовок :: Подшаг 1 | Подшаг 2)</label>
+                  <textarea
+                    value={processStepsToText(block.content.steps ?? [])}
+                    onChange={(event) =>
+                      updateBlockContent(index, "steps", textToProcessSteps(event.target.value))
+                    }
+                  />
+                  <label>Результат</label>
+                  <input
+                    value={block.content.result?.title ?? ""}
+                    onChange={(event) =>
+                      updateBlockContent(index, "result", {
+                        ...(block.content.result ?? {}),
+                        title: event.target.value
+                      })
+                    }
+                  />
+                  <label>Подзаголовок результата</label>
+                  <textarea
+                    value={block.content.result?.subtitle ?? ""}
+                    onChange={(event) =>
+                      updateBlockContent(index, "result", {
+                        ...(block.content.result ?? {}),
+                        subtitle: event.target.value
+                      })
                     }
                   />
                 </>

@@ -276,6 +276,10 @@
   cursor: grab;
 }
 
+.builder-process .process-node {
+  cursor: text;
+}
+
 .builder-input {
   padding: 8px 10px;
   border-radius: 10px;

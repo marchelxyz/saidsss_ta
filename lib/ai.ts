@@ -243,6 +243,8 @@ function describeBlockSchema(blockType: string): string {
       return "title: string, items: string[]";
     case "faq":
       return "title: string, items: {question: string, answer: string}[]";
+    case "process_map":
+      return "title: string, steps: {title: string, subtitle: string, items: string[]}[], result: {title: string, subtitle: string}";
     case "contact":
       return "title: string, subtitle: string";
     case "text":
@@ -284,6 +286,25 @@ function normalizeBlockContent(
           answer: String((item as any)?.answer ?? "").trim()
         }))
         .filter((item) => item.question || item.answer)
+    };
+  }
+  if (blockType === "process_map") {
+    const steps = Array.isArray(content.steps) ? content.steps : [];
+    return {
+      title: String(content.title ?? ""),
+      steps: steps
+        .map((step) => ({
+          title: String((step as any)?.title ?? "").trim(),
+          subtitle: String((step as any)?.subtitle ?? "").trim(),
+          items: Array.isArray((step as any)?.items)
+            ? (step as any).items.map((item: unknown) => String(item ?? "").trim()).filter(Boolean)
+            : []
+        }))
+        .filter((step) => step.title || step.subtitle || step.items.length > 0),
+      result: {
+        title: String((content.result as any)?.title ?? ""),
+        subtitle: String((content.result as any)?.subtitle ?? "")
+      }
     };
   }
   if (blockType === "contact") {
