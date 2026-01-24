@@ -102,6 +102,7 @@
 
 .admin-board-shell {
   position: relative;
+  padding: 0 48px;
 }
 
 .board-scroll-button {
@@ -122,11 +123,11 @@
 }
 
 .board-scroll-button.left {
-  left: -12px;
+  left: 8px;
 }
 
 .board-scroll-button.right {
-  right: -12px;
+  right: 8px;
 }
 
 .admin-column {
