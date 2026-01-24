@@ -31,26 +31,6 @@ type SocialLink = {
   href: string;
 };
 
-/**
- * Build social links list from settings data.
- */
-function buildSocialLinks(social?: SiteBlocksProps["social"]): SocialLink[] {
-  const links: SocialLink[] = [];
-  if (social?.telegram_url) {
-    links.push({ label: "Telegram", href: social.telegram_url });
-  }
-  if (social?.vk_url) {
-    links.push({ label: "VK", href: social.vk_url });
-  }
-  if (social?.youtube_url) {
-    links.push({ label: "YouTube", href: social.youtube_url });
-  }
-  if (social?.instagram_url) {
-    links.push({ label: "Instagram", href: social.instagram_url });
-  }
-  return links;
-}
-
 export default function SiteBlocks({
   blocks,
   sourcePage,
@@ -100,7 +80,7 @@ export default function SiteBlocks({
             <section className="section" key={`text-${index}`} id={sectionId}>
               <div className="container">
                 <h2 className="section-title">{block.content.title}</h2>
-                <p className="section-subtitle">{block.content.text}</p>
+                {renderRichText(block.content.text)}
               </div>
             </section>
           );
@@ -463,5 +443,161 @@ export default function SiteBlocks({
         return null;
       })}
     </>
+  );
+}
+
+type RichBlock =
+  | { type: "paragraph"; text: string }
+  | { type: "list"; items: string[] }
+  | { type: "table"; rows: string[][]; header?: string[] };
+
+/**
+ * Build social links list from settings data.
+ */
+function buildSocialLinks(social?: SiteBlocksProps["social"]): SocialLink[] {
+  const links: SocialLink[] = [];
+  if (social?.telegram_url) {
+    links.push({ label: "Telegram", href: social.telegram_url });
+  }
+  if (social?.vk_url) {
+    links.push({ label: "VK", href: social.vk_url });
+  }
+  if (social?.youtube_url) {
+    links.push({ label: "YouTube", href: social.youtube_url });
+  }
+  if (social?.instagram_url) {
+    links.push({ label: "Instagram", href: social.instagram_url });
+  }
+  return links;
+}
+
+/**
+ * Render rich text with paragraphs, lists, and tables.
+ */
+function renderRichText(value?: string) {
+  const blocks = parseRichTextBlocks(value);
+  if (blocks.length === 0) return null;
+
+  return (
+    <div className="rich-text">
+      {blocks.map((block, index) => {
+        if (block.type === "list") {
+          return (
+            <ul key={`list-${index}`}>
+              {block.items.map((item, itemIndex) => (
+                <li key={`list-${index}-${itemIndex}`}>{item}</li>
+              ))}
+            </ul>
+          );
+        }
+        if (block.type === "table") {
+          return (
+            <table key={`table-${index}`}>
+              {block.header && (
+                <thead>
+                  <tr>
+                    {block.header.map((cell, cellIndex) => (
+                      <th key={`th-${index}-${cellIndex}`}>{cell}</th>
+                    ))}
+                  </tr>
+                </thead>
+              )}
+              <tbody>
+                {block.rows.map((row, rowIndex) => (
+                  <tr key={`row-${index}-${rowIndex}`}>
+                    {row.map((cell, cellIndex) => (
+                      <td key={`cell-${index}-${rowIndex}-${cellIndex}`}>{cell}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          );
+        }
+        return <p key={`p-${index}`}>{block.text}</p>;
+      })}
+    </div>
+  );
+}
+
+function parseRichTextBlocks(value?: string): RichBlock[] {
+  const raw = String(value ?? "").trim();
+  if (!raw) return [];
+
+  const lines = raw.split(/\r?\n/);
+  const blocks: RichBlock[] = [];
+  let tableRows: string[][] = [];
+  let listItems: string[] = [];
+
+  const flushTable = () => {
+    if (tableRows.length === 0) return;
+    const header = isHeaderRow(tableRows[0]) ? tableRows[0] : undefined;
+    const bodyRows = header ? tableRows.slice(1) : tableRows;
+    blocks.push({ type: "table", rows: bodyRows, header });
+    tableRows = [];
+  };
+
+  const flushList = () => {
+    if (listItems.length === 0) return;
+    blocks.push({ type: "list", items: listItems });
+    listItems = [];
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      flushTable();
+      flushList();
+      continue;
+    }
+
+    if (isListLine(trimmed)) {
+      flushTable();
+      listItems.push(trimmed.replace(/^[-—•]\s+/, ""));
+      continue;
+    }
+
+    const row = parseTableRow(trimmed);
+    if (row) {
+      flushList();
+      tableRows.push(row);
+      continue;
+    }
+
+    flushTable();
+    flushList();
+    blocks.push({ type: "paragraph", text: trimmed });
+  }
+
+  flushTable();
+  flushList();
+
+  return blocks;
+}
+
+function isListLine(line: string) {
+  return /^[-—•]\s+/.test(line);
+}
+
+function parseTableRow(line: string) {
+  if (line.includes("\t")) {
+    const cells = line
+      .split(/\t+/)
+      .map((cell) => cell.trim())
+      .filter(Boolean);
+    return cells.length >= 2 ? cells : null;
+  }
+
+  const cells = line
+    .split(/\s{2,}/)
+    .map((cell) => cell.trim())
+    .filter(Boolean);
+  return cells.length >= 2 ? cells : null;
+}
+
+function isHeaderRow(row: string[]) {
+  const headerHints = ["цель", "персон", "правовые", "виды", "данные"];
+  return row.some((cell) =>
+    headerHints.some((hint) => cell.toLowerCase().includes(hint))
   );
 }
