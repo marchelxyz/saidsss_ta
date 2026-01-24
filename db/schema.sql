@@ -14,6 +14,8 @@ create table if not exists leads (
   source_page text,
   status text default 'new',
   stage text default 'new',
+  is_lost boolean default false,
+  loss_reason_id uuid,
   notes text,
   analysis_status text default 'pending',
   analysis_summary text,
@@ -24,6 +26,25 @@ create table if not exists leads (
 
 alter table leads
   add column if not exists source_page text;
+alter table leads
+  add column if not exists is_lost boolean default false;
+alter table leads
+  add column if not exists loss_reason_id uuid;
+
+create table if not exists lead_loss_reasons (
+  id uuid primary key default gen_random_uuid(),
+  name text unique not null,
+  sort_order int default 0,
+  created_at timestamptz default now()
+);
+
+alter table leads
+  add constraint leads_loss_reason_fk
+  foreign key (loss_reason_id)
+  references lead_loss_reasons(id)
+  on delete set null;
+
+create index if not exists leads_loss_reason_idx on leads (loss_reason_id);
 
 create table if not exists articles (
   id uuid primary key default gen_random_uuid(),

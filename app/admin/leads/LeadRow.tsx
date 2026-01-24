@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Lead = {
   id: string;
@@ -13,6 +13,8 @@ type Lead = {
   message?: string | null;
   status?: string | null;
   stage?: string | null;
+  is_lost?: boolean | null;
+  loss_reason_id?: string | null;
   notes?: string | null;
   analysis_status?: string | null;
   analysis_summary?: string | null;
@@ -43,16 +45,28 @@ export default function LeadRow({
   tags: initialTags,
   tasks: initialTasks,
   stages,
-  team
+  team,
+  lossReasons,
+  draggable,
+  onDragStart,
+  onStageChange: onStageChangeExternal,
+  onLeadUpdate
 }: {
   lead: Lead;
   tags: string[];
   tasks: LeadTask[];
   stages: string[];
   team: TeamMember[];
+  lossReasons: Array<{ id: string; name: string }>;
+  draggable?: boolean;
+  onDragStart?: () => void;
+  onStageChange?: (value: string) => void;
+  onLeadUpdate?: (patch: Partial<Lead>) => void;
 }) {
   const [status, setStatus] = useState(lead.status ?? "new");
   const [stage, setStage] = useState(lead.stage ?? "new");
+  const [isLost, setIsLost] = useState(Boolean(lead.is_lost));
+  const [lossReasonId, setLossReasonId] = useState(lead.loss_reason_id ?? "");
   const [notes, setNotes] = useState(lead.notes ?? "");
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState(lead.analysis_summary ?? "");
@@ -64,7 +78,26 @@ export default function LeadRow({
   const [taskDue, setTaskDue] = useState("");
   const [taskAssignee, setTaskAssignee] = useState("");
 
-  const saveLead = async (payload: { status?: string; notes?: string; stage?: string }) => {
+  useEffect(() => {
+    setStage(lead.stage ?? "new");
+  }, [lead.stage]);
+
+  useEffect(() => {
+    setStatus(lead.status ?? "new");
+  }, [lead.status]);
+
+  useEffect(() => {
+    setIsLost(Boolean(lead.is_lost));
+    setLossReasonId(lead.loss_reason_id ?? "");
+  }, [lead.is_lost, lead.loss_reason_id]);
+
+  const saveLead = async (payload: {
+    status?: string;
+    notes?: string;
+    stage?: string;
+    is_lost?: boolean;
+    loss_reason_id?: string | null;
+  }) => {
     await fetch(`/api/admin/leads/${lead.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -84,6 +117,21 @@ export default function LeadRow({
   const onStageChange = async (value: string) => {
     setStage(value);
     await saveLead({ stage: value });
+    onStageChangeExternal?.(value);
+  };
+
+  const onLostToggle = async (value: boolean) => {
+    setIsLost(value);
+    const nextReason = value ? lossReasonId || null : null;
+    setLossReasonId(value ? lossReasonId : "");
+    await saveLead({ is_lost: value, loss_reason_id: nextReason });
+    onLeadUpdate?.({ is_lost: value, loss_reason_id: nextReason });
+  };
+
+  const onLossReasonChange = async (value: string) => {
+    setLossReasonId(value);
+    await saveLead({ is_lost: true, loss_reason_id: value || null });
+    onLeadUpdate?.({ is_lost: true, loss_reason_id: value || null });
   };
 
   const onTagsBlur = async () => {
@@ -176,7 +224,12 @@ export default function LeadRow({
   };
 
   return (
-    <div className="admin-card" style={{ marginBottom: 16 }}>
+    <div
+      className="admin-card"
+      style={{ marginBottom: 16 }}
+      draggable={draggable}
+      onDragStart={onDragStart}
+    >
       <div className="admin-toolbar">
         <div>
           <strong>{lead.name}</strong>
@@ -217,6 +270,30 @@ export default function LeadRow({
       <div style={{ marginBottom: 12 }}>
         <span className="admin-pill">AI: {analysisStatus}</span>
         {analysis && <p style={{ marginTop: 8 }}>{analysis}</p>}
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            type="checkbox"
+            checked={isLost}
+            onChange={(event) => onLostToggle(event.target.checked)}
+          />
+          Слив
+        </label>
+        {isLost && (
+          <select
+            value={lossReasonId}
+            onChange={(event) => onLossReasonChange(event.target.value)}
+          >
+            <option value="">Причина слива</option>
+            {lossReasons.map((reason) => (
+              <option key={reason.id} value={reason.id}>
+                {reason.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       <div style={{ marginBottom: 12 }}>

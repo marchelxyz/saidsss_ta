@@ -100,8 +100,44 @@
   padding-bottom: 12px;
 }
 
+.admin-board-shell {
+  position: relative;
+}
+
+.board-scroll-button {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  width: 36px;
+  height: 64px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(15, 18, 25, 0.9);
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.board-scroll-button.left {
+  left: -12px;
+}
+
+.board-scroll-button.right {
+  right: -12px;
+}
+
 .admin-column {
   min-width: 280px;
+}
+
+.admin-column.is-drop-target {
+  outline: 2px dashed rgba(122, 108, 255, 0.6);
+  outline-offset: 6px;
+  border-radius: 16px;
+  background: rgba(122, 108, 255, 0.08);
 }
 
 .admin-column h3 {
