@@ -38,11 +38,16 @@ create table if not exists lead_loss_reasons (
   created_at timestamptz default now()
 );
 
-alter table leads
-  add constraint leads_loss_reason_fk
-  foreign key (loss_reason_id)
-  references lead_loss_reasons(id)
-  on delete set null;
+do $$
+begin
+  alter table leads
+    add constraint leads_loss_reason_fk
+    foreign key (loss_reason_id)
+    references lead_loss_reasons(id)
+    on delete set null;
+exception
+  when duplicate_object then null;
+end $$;
 
 create index if not exists leads_loss_reason_idx on leads (loss_reason_id);
 
