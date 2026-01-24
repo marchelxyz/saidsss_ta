@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Lead = {
   id: string;
@@ -43,13 +43,19 @@ export default function LeadRow({
   tags: initialTags,
   tasks: initialTasks,
   stages,
-  team
+  team,
+  draggable,
+  onDragStart,
+  onStageChange: onStageChangeExternal
 }: {
   lead: Lead;
   tags: string[];
   tasks: LeadTask[];
   stages: string[];
   team: TeamMember[];
+  draggable?: boolean;
+  onDragStart?: () => void;
+  onStageChange?: (value: string) => void;
 }) {
   const [status, setStatus] = useState(lead.status ?? "new");
   const [stage, setStage] = useState(lead.stage ?? "new");
@@ -63,6 +69,14 @@ export default function LeadRow({
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDue, setTaskDue] = useState("");
   const [taskAssignee, setTaskAssignee] = useState("");
+
+  useEffect(() => {
+    setStage(lead.stage ?? "new");
+  }, [lead.stage]);
+
+  useEffect(() => {
+    setStatus(lead.status ?? "new");
+  }, [lead.status]);
 
   const saveLead = async (payload: { status?: string; notes?: string; stage?: string }) => {
     await fetch(`/api/admin/leads/${lead.id}`, {
@@ -84,6 +98,7 @@ export default function LeadRow({
   const onStageChange = async (value: string) => {
     setStage(value);
     await saveLead({ stage: value });
+    onStageChangeExternal?.(value);
   };
 
   const onTagsBlur = async () => {
@@ -176,7 +191,12 @@ export default function LeadRow({
   };
 
   return (
-    <div className="admin-card" style={{ marginBottom: 16 }}>
+    <div
+      className="admin-card"
+      style={{ marginBottom: 16 }}
+      draggable={draggable}
+      onDragStart={onDragStart}
+    >
       <div className="admin-toolbar">
         <div>
           <strong>{lead.name}</strong>

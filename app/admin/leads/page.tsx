@@ -1,5 +1,5 @@
 import { getPool } from "@/lib/db";
-import LeadRow from "./LeadRow";
+import LeadBoard from "./LeadBoard";
 import LeadTools from "./LeadTools";
 
 export const dynamic = "force-dynamic";
@@ -27,14 +27,17 @@ export default async function LeadsPage() {
     pool.query(`select id, name from team_members where active = true order by name`)
   ]);
 
-  const tagsByLead = new Map<string, string[]>();
+  const tagsByLead: Record<string, string[]> = {};
   for (const row of tagResult.rows as Array<{ lead_id: string; name: string }>) {
-    const list = tagsByLead.get(row.lead_id) ?? [];
+    const list = tagsByLead[row.lead_id] ?? [];
     list.push(row.name);
-    tagsByLead.set(row.lead_id, list);
+    tagsByLead[row.lead_id] = list;
   }
 
-  const tasksByLead = new Map<string, Array<{ id: string; title: string; status: string; due_date?: string | null; assignee_id?: string | null }>>();
+  const tasksByLead: Record<
+    string,
+    Array<{ id: string; title: string; status: string; due_date?: string | null; assignee_id?: string | null }>
+  > = {};
   for (const row of taskResult.rows as Array<{
     id: string;
     lead_id: string;
@@ -43,7 +46,7 @@ export default async function LeadsPage() {
     due_date?: Date | string | null;
     assignee_id?: string | null;
   }>) {
-    const list = tasksByLead.get(row.lead_id) ?? [];
+    const list = tasksByLead[row.lead_id] ?? [];
     const dueDate =
       row.due_date instanceof Date
         ? row.due_date.toISOString().slice(0, 10)
@@ -55,7 +58,7 @@ export default async function LeadsPage() {
       due_date: dueDate,
       assignee_id: row.assignee_id
     });
-    tasksByLead.set(row.lead_id, list);
+    tasksByLead[row.lead_id] = list;
   }
 
   const stages = (stageResult.rows as Array<{ name: string }>).map((row) => row.name);
@@ -77,17 +80,6 @@ export default async function LeadsPage() {
     analysis_summary?: string | null;
   }>;
 
-  const leadsByStage = new Map<string, typeof leads>();
-  for (const stage of stageList) {
-    leadsByStage.set(stage, []);
-  }
-  for (const lead of leads) {
-    const bucket = lead.stage ?? "new";
-    const list = leadsByStage.get(bucket) ?? [];
-    list.push(lead);
-    leadsByStage.set(bucket, list);
-  }
-
   return (
     <div>
       <div className="admin-toolbar">
@@ -98,23 +90,13 @@ export default async function LeadsPage() {
       {leads.length === 0 ? (
         <div className="admin-card">Лидов пока нет.</div>
       ) : (
-        <div className="admin-board">
-          {stageList.map((stageName) => (
-            <div key={stageName} className="admin-column">
-              <h3>{stageName}</h3>
-              {(leadsByStage.get(stageName) ?? []).map((lead) => (
-                <LeadRow
-                  key={lead.id}
-                  lead={lead}
-                  tags={tagsByLead.get(lead.id) ?? []}
-                  tasks={tasksByLead.get(lead.id) ?? []}
-                  stages={stageList}
-                  team={team}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+        <LeadBoard
+          leads={leads}
+          tagsByLead={tagsByLead}
+          tasksByLead={tasksByLead}
+          stages={stageList}
+          team={team}
+        />
       )}
     </div>
   );
