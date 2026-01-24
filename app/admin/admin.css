@@ -25,6 +25,7 @@
 
 .admin-main {
   padding: 32px 36px 60px;
+  min-width: 0;
 }
 
 .admin-card {
@@ -103,6 +104,8 @@
 .admin-board-shell {
   position: relative;
   padding: 0 48px;
+  width: 100%;
+  max-width: 100%;
 }
 
 .board-scroll-button {
