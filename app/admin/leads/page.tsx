@@ -6,10 +6,11 @@ export const dynamic = "force-dynamic";
 
 export default async function LeadsPage() {
   const pool = getPool();
-  const [leadResult, tagResult, taskResult, stageResult, teamResult] = await Promise.all([
+  const [leadResult, tagResult, taskResult, stageResult, teamResult, lossReasonResult] =
+    await Promise.all([
     pool.query(
       `select id, name, phone, email, company, role, summary, message, status, stage, notes,
-              analysis_status, analysis_summary
+              analysis_status, analysis_summary, is_lost, loss_reason_id
        from leads
        order by created_at desc
        limit 200`
@@ -24,7 +25,8 @@ export default async function LeadsPage() {
        from lead_tasks order by created_at desc`
     ),
     pool.query(`select name from lead_stages order by sort_order asc`),
-    pool.query(`select id, name from team_members where active = true order by name`)
+    pool.query(`select id, name from team_members where active = true order by name`),
+    pool.query(`select id, name from lead_loss_reasons order by sort_order asc`)
   ]);
 
   const tagsByLead: Record<string, string[]> = {};
@@ -64,6 +66,7 @@ export default async function LeadsPage() {
   const stages = (stageResult.rows as Array<{ name: string }>).map((row) => row.name);
   const stageList = stages.length ? stages : ["new", "qualification", "proposal", "negotiation", "won", "lost"];
   const team = teamResult.rows as Array<{ id: string; name: string }>;
+  const lossReasons = lossReasonResult.rows as Array<{ id: string; name: string }>;
   const leads = leadResult.rows as Array<{
     id: string;
     name: string;
@@ -75,6 +78,8 @@ export default async function LeadsPage() {
     message?: string | null;
     status?: string | null;
     stage?: string | null;
+    is_lost?: boolean | null;
+    loss_reason_id?: string | null;
     notes?: string | null;
     analysis_status?: string | null;
     analysis_summary?: string | null;
@@ -86,7 +91,7 @@ export default async function LeadsPage() {
         <h1 className="section-title">CRM</h1>
         <p className="section-subtitle">Последние 200 лидов</p>
       </div>
-      <LeadTools />
+      <LeadTools stages={stageList} lossReasons={lossReasons} />
       {leads.length === 0 ? (
         <div className="admin-card">Лидов пока нет.</div>
       ) : (
@@ -96,6 +101,7 @@ export default async function LeadsPage() {
           tasksByLead={tasksByLead}
           stages={stageList}
           team={team}
+          lossReasons={lossReasons}
         />
       )}
     </div>

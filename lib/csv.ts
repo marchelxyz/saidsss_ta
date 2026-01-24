@@ -1,20 +1,36 @@
-export function toCsv(rows: Array<Record<string, string | number | null>>) {
+type CsvOptions = {
+  delimiter?: string;
+  headers?: string[];
+  includeBom?: boolean;
+};
+
+/**
+ * Convert rows into CSV text.
+ */
+export function toCsv(
+  rows: Array<Record<string, string | number | null>>,
+  options: CsvOptions = {}
+) {
   if (!rows.length) return "";
-  const headers = Object.keys(rows[0]);
+  const delimiter = options.delimiter ?? ",";
+  const headers = options.headers ?? Object.keys(rows[0]);
   const escape = (value: string | number | null) => {
     if (value === null || value === undefined) return "";
     const str = String(value);
-    if (/[",\n]/.test(str)) {
+    const shouldQuote = new RegExp(`[\"\\n\\r${delimiter}]`).test(str);
+    if (shouldQuote) {
       return `"${str.replace(/"/g, '""')}"`;
     }
     return str;
   };
 
-  const lines = [headers.join(",")];
+  const lines = [headers.join(delimiter)];
   for (const row of rows) {
-    lines.push(headers.map((key) => escape(row[key] ?? "")).join(","));
+    lines.push(headers.map((key) => escape(row[key] ?? "")).join(delimiter));
   }
-  return lines.join("\n");
+
+  const csvBody = lines.join("\r\n");
+  return options.includeBom ? `\uFEFF${csvBody}` : csvBody;
 }
 
 export function parseCsv(input: string) {

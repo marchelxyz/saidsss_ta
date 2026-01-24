@@ -1,5 +1,6 @@
 import { getPool } from "@/lib/db";
 import SettingsForm from "./SettingsForm";
+import LossReasonManager from "./LossReasonManager";
 import StageManager from "./StageManager";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ export default async function SettingsPage() {
       </div>
       <SettingsForm initial={result.rows[0] ?? {}} />
       <StageManager />
+      <LossReasonManager />
     </div>
   );
 }
