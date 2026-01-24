@@ -16,7 +16,9 @@ export default async function SettingsPage() {
     <div>
       <div className="admin-toolbar">
         <h1 className="section-title">Настройки</h1>
-        <p className="section-subtitle">Контакты и данные для сайта</p>
+        <p className="section-subtitle">
+          Контакты, реквизиты, политика и ссылки на соцсети для сайта.
+        </p>
       </div>
       <SettingsForm initial={result.rows[0] ?? {}} />
       <StageManager />

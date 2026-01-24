@@ -31,95 +31,11 @@ const BLOCK_TYPES = [
   { value: "text", label: "Текст" },
   { value: "list", label: "Список" },
   { value: "faq", label: "FAQ" },
+  { value: "process_map", label: "Процесс (схема)" },
   { value: "image", label: "Изображение" },
   { value: "contact", label: "Контакты" }
 ];
 
-const buildDefaultBlock = (type: string): BlockData => {
-  switch (type) {
-    case "hero":
-      return {
-        block_type: "hero",
-        content: {
-          title: "Заголовок",
-          subtitle: "Подзаголовок",
-          button_text: "Получить аудит",
-          button_link: "#contact"
-        },
-        style: { radius: 18 }
-      };
-    case "list":
-      return {
-        block_type: "list",
-        content: {
-          title: "Список преимуществ",
-          items: ["Пункт 1", "Пункт 2", "Пункт 3"]
-        },
-        style: { radius: 16 }
-      };
-    case "faq":
-      return {
-        block_type: "faq",
-        content: {
-          title: "FAQ",
-          items: [
-            { question: "Вопрос 1", answer: "Ответ 1" },
-            { question: "Вопрос 2", answer: "Ответ 2" }
-          ]
-        },
-        style: { radius: 16 }
-      };
-    case "image":
-      return {
-        block_type: "image",
-        content: {
-          title: "Блок с изображением",
-          text: "Описание блока",
-          image_url: ""
-        },
-        style: { radius: 16 }
-      };
-    case "contact":
-      return {
-        block_type: "contact",
-        content: {
-          title: "Обсудим проект",
-          subtitle: "Оставьте контакты — вернемся с планом аудита."
-        },
-        style: { radius: 16 }
-      };
-    case "text":
-    default:
-      return {
-        block_type: "text",
-        content: {
-          title: "Заголовок секции",
-          text: "Текст блока"
-        },
-        style: { radius: 16 }
-      };
-  }
-};
-
-const listToText = (items?: string[]) => (items ?? []).join("\n");
-const textToList = (value: string) =>
-  value
-    .split("\n")
-    .map((item) => item.trim())
-    .filter(Boolean);
-const faqToText = (items?: Array<{ question?: string; answer?: string }>) =>
-  (items ?? [])
-    .map((item) => `${item.question ?? ""} :: ${item.answer ?? ""}`.trim())
-    .join("\n");
-const textToFaq = (value: string) =>
-  value
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const [question, answer] = line.split("::").map((part) => part.trim());
-      return { question: question ?? "", answer: answer ?? "" };
-    });
 
 export default function PageEditor({ initialPage, initialBlocks }: PageEditorProps) {
   const router = useRouter();
@@ -293,6 +209,7 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
           onChange={(event) =>
             setPage((prev) => ({ ...prev, meta_description: event.target.value }))
           }
+          onInput={(event) => autoResizeTextArea(event.currentTarget)}
         />
         <label>Публикация</label>
         <select
@@ -369,6 +286,7 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
                   <textarea
                     value={block.content.subtitle ?? ""}
                     onChange={(event) => updateBlockContent(index, "subtitle", event.target.value)}
+                    onInput={(event) => autoResizeTextArea(event.currentTarget)}
                   />
                   <label>Текст кнопки</label>
                   <input
@@ -398,6 +316,7 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
                   <textarea
                     value={block.content.text ?? ""}
                     onChange={(event) => updateBlockContent(index, "text", event.target.value)}
+                    onInput={(event) => autoResizeTextArea(event.currentTarget)}
                   />
                 </>
               )}
@@ -415,6 +334,7 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
                     onChange={(event) =>
                       updateBlockContent(index, "items", textToList(event.target.value))
                     }
+                    onInput={(event) => autoResizeTextArea(event.currentTarget)}
                   />
                 </>
               )}
@@ -432,6 +352,46 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
                     onChange={(event) =>
                       updateBlockContent(index, "items", textToFaq(event.target.value))
                     }
+                    onInput={(event) => autoResizeTextArea(event.currentTarget)}
+                  />
+                </>
+              )}
+
+              {block.block_type === "process_map" && (
+                <>
+                  <label>Заголовок</label>
+                  <input
+                    value={block.content.title ?? ""}
+                    onChange={(event) => updateBlockContent(index, "title", event.target.value)}
+                  />
+                  <label>Шаги (формат: Шаг :: Подзаголовок :: Подшаг 1 | Подшаг 2)</label>
+                  <textarea
+                    value={processStepsToText(block.content.steps ?? [])}
+                    onChange={(event) =>
+                      updateBlockContent(index, "steps", textToProcessSteps(event.target.value))
+                    }
+                    onInput={(event) => autoResizeTextArea(event.currentTarget)}
+                  />
+                  <label>Результат</label>
+                  <input
+                    value={block.content.result?.title ?? ""}
+                    onChange={(event) =>
+                      updateBlockContent(index, "result", {
+                        ...(block.content.result ?? {}),
+                        title: event.target.value
+                      })
+                    }
+                  />
+                  <label>Подзаголовок результата</label>
+                  <textarea
+                    value={block.content.result?.subtitle ?? ""}
+                    onChange={(event) =>
+                      updateBlockContent(index, "result", {
+                        ...(block.content.result ?? {}),
+                        subtitle: event.target.value
+                      })
+                    }
+                    onInput={(event) => autoResizeTextArea(event.currentTarget)}
                   />
                 </>
               )}
@@ -447,6 +407,7 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
                   <textarea
                     value={block.content.text ?? ""}
                     onChange={(event) => updateBlockContent(index, "text", event.target.value)}
+                    onInput={(event) => autoResizeTextArea(event.currentTarget)}
                   />
                   <label>URL изображения</label>
                   <input
@@ -460,6 +421,7 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
                       updateBlockContent(index, "image_prompt", event.target.value)
                     }
                     placeholder="Например: инфографика, процесс, темный фон..."
+                    onInput={(event) => autoResizeTextArea(event.currentTarget)}
                   />
                   <button
                     className="btn btn-secondary"
@@ -484,6 +446,7 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
                   <textarea
                     value={block.content.subtitle ?? ""}
                     onChange={(event) => updateBlockContent(index, "subtitle", event.target.value)}
+                    onInput={(event) => autoResizeTextArea(event.currentTarget)}
                   />
                 </>
               )}
@@ -496,4 +459,143 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
       </div>
     </div>
   );
+}
+
+function buildDefaultBlock(type: string): BlockData {
+  switch (type) {
+    case "hero":
+      return {
+        block_type: "hero",
+        content: {
+          title: "Заголовок",
+          subtitle: "Подзаголовок",
+          button_text: "Получить аудит",
+          button_link: "#contact"
+        },
+        style: { radius: 18 }
+      };
+    case "list":
+      return {
+        block_type: "list",
+        content: {
+          title: "Список преимуществ",
+          items: ["Пункт 1", "Пункт 2", "Пункт 3"]
+        },
+        style: { radius: 16 }
+      };
+    case "faq":
+      return {
+        block_type: "faq",
+        content: {
+          title: "FAQ",
+          items: [
+            { question: "Вопрос 1", answer: "Ответ 1" },
+            { question: "Вопрос 2", answer: "Ответ 2" }
+          ]
+        },
+        style: { radius: 16 }
+      };
+    case "process_map":
+      return {
+        block_type: "process_map",
+        content: {
+          title: "Как выглядит процесс",
+          steps: [
+            { title: "Шаг 1", subtitle: "Короткое пояснение", items: ["Подшаг 1"] }
+          ],
+          result: {
+            title: "Результат",
+            subtitle: "Автоматизированный бизнес"
+          }
+        },
+        style: { radius: 16 }
+      };
+    case "image":
+      return {
+        block_type: "image",
+        content: {
+          title: "Блок с изображением",
+          text: "Описание блока",
+          image_url: ""
+        },
+        style: { radius: 16 }
+      };
+    case "contact":
+      return {
+        block_type: "contact",
+        content: {
+          title: "Обсудим проект",
+          subtitle: "Оставьте контакты — вернемся с планом аудита."
+        },
+        style: { radius: 16 }
+      };
+    case "text":
+    default:
+      return {
+        block_type: "text",
+        content: {
+          title: "Заголовок секции",
+          text: "Текст блока"
+        },
+        style: { radius: 16 }
+      };
+  }
+}
+
+function listToText(items?: string[]) {
+  return (items ?? []).join("\n");
+}
+
+function textToList(value: string) {
+  return value
+    .split("\n")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function faqToText(items?: Array<{ question?: string; answer?: string }>) {
+  return (items ?? [])
+    .map((item) => `${item.question ?? ""} :: ${item.answer ?? ""}`.trim())
+    .join("\n");
+}
+
+function textToFaq(value: string) {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [question, answer] = line.split("::").map((part) => part.trim());
+      return { question: question ?? "", answer: answer ?? "" };
+    });
+}
+
+function processStepsToText(
+  steps?: Array<{ title?: string; subtitle?: string; items?: string[] }>
+) {
+  return (steps ?? [])
+    .map((step) => {
+      const items = (step.items ?? []).join(" | ");
+      return `${step.title ?? ""} :: ${step.subtitle ?? ""} :: ${items}`.trim();
+    })
+    .join("\n");
+}
+
+function textToProcessSteps(value: string) {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const [title, subtitle, itemsText] = line.split("::").map((part) => part.trim());
+      const items = itemsText
+        ? itemsText.split("|").map((item) => item.trim()).filter(Boolean)
+        : [];
+      return { title: title ?? "", subtitle: subtitle ?? "", items };
+    });
+}
+
+function autoResizeTextArea(element: HTMLTextAreaElement) {
+  element.style.height = "auto";
+  element.style.height = `${element.scrollHeight}px`;
 }

@@ -62,6 +62,7 @@ export default function SettingsForm({ initial }: { initial: Partial<Settings> }
 
   return (
     <div className="admin-form">
+      <h3>Контакты</h3>
       <div>
         <label>Telegram</label>
         <input name="telegram" value={form.telegram} onChange={onChange} />
@@ -82,6 +83,7 @@ export default function SettingsForm({ initial }: { initial: Partial<Settings> }
         <label>Адрес</label>
         <input name="address" value={form.address} onChange={onChange} />
       </div>
+      <h3>Реквизиты</h3>
       <div>
         <label>Название организации</label>
         <input name="company_name" value={form.company_name} onChange={onChange} />
@@ -102,10 +104,12 @@ export default function SettingsForm({ initial }: { initial: Partial<Settings> }
         <label>КПП</label>
         <input name="kpp" value={form.kpp} onChange={onChange} />
       </div>
+      <h3>Политика</h3>
       <div>
         <label>Ссылка на политику персональных данных</label>
         <input name="policy_url" value={form.policy_url} onChange={onChange} />
       </div>
+      <h3>Социальные сети</h3>
       <div>
         <label>VK</label>
         <input name="vk_url" value={form.vk_url} onChange={onChange} />

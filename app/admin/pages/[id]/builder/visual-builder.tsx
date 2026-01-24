@@ -33,6 +33,11 @@ type DragItem = {
   itemIndex: number;
 };
 
+type DragStep = {
+  blockIndex: number;
+  stepIndex: number;
+};
+
 type VisualBuilderProps = {
   initialPage: PageData;
   initialBlocks: BlockData[];
@@ -60,6 +65,7 @@ const BLOCK_OPTIONS: BlockOption[] = [
   { value: "text", label: "Текст" },
   { value: "list", label: "Список" },
   { value: "faq", label: "FAQ" },
+  { value: "process_map", label: "Процесс (схема)" },
   { value: "image", label: "Изображение" },
   { value: "contact", label: "Контакты" }
 ];
@@ -98,6 +104,25 @@ function buildDefaultBlock(type: string): BlockData {
             { question: "Вопрос 1", answer: "Ответ 1" },
             { question: "Вопрос 2", answer: "Ответ 2" }
           ]
+        },
+        style: { radius: 16 }
+      };
+    case "process_map":
+      return {
+        block_type: "process_map",
+        content: {
+          title: "Как выглядит процесс",
+          steps: [
+            {
+              title: "Шаг 1",
+              subtitle: "Короткое пояснение",
+              items: ["Подшаг 1"]
+            }
+          ],
+          result: {
+            title: "Результат",
+            subtitle: "Автоматизированный бизнес"
+          }
         },
         style: { radius: 16 }
       };
@@ -144,6 +169,7 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
   );
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragItem, setDragItem] = useState<DragItem | null>(null);
+  const [dragStep, setDragStep] = useState<DragStep | null>(null);
   const [newBlockType, setNewBlockType] = useState("text");
   const [isSaving, setIsSaving] = useState(false);
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -232,6 +258,25 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
     if (dragItem.itemIndex === itemIndex) return;
     moveBlockItem(blockIndex, dragItem.itemIndex, itemIndex);
     setDragItem(null);
+  };
+
+  const moveProcessStep = (blockIndex: number, fromIndex: number, toIndex: number) => {
+    setBlocks((prev) =>
+      prev.map((block, idx) => {
+        if (idx !== blockIndex) return block;
+        const steps = [...(block.content.steps ?? [])];
+        const [moved] = steps.splice(fromIndex, 1);
+        steps.splice(toIndex, 0, moved);
+        return { ...block, content: { ...block.content, steps } };
+      })
+    );
+  };
+
+  const handleStepDrop = (blockIndex: number, stepIndex: number) => {
+    if (!dragStep || dragStep.blockIndex !== blockIndex) return;
+    if (dragStep.stepIndex === stepIndex) return;
+    moveProcessStep(blockIndex, dragStep.stepIndex, stepIndex);
+    setDragStep(null);
   };
 
   const generateImageForBlock = async (index: number) => {
@@ -617,7 +662,7 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                     <div className="faq">
                       {(block.content.items ?? []).map(
                         (item: { question?: string; answer?: string }, itemIndex: number) => (
-                          <div
+                          <details
                             className="card builder-item"
                             key={`faq-${itemIndex}`}
                             draggable
@@ -628,11 +673,9 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                             <div className="builder-item-handle" title="Перетащить">
                               ⋮⋮
                             </div>
-                            <strong
+                            <summary
                               className="builder-editable"
-                              contentEditable={
-                                editingKey === `${keyBase}-faq-q-${itemIndex}`
-                              }
+                              contentEditable={editingKey === `${keyBase}-faq-q-${itemIndex}`}
                               suppressContentEditableWarning
                               onDoubleClick={() =>
                                 setEditingKey(`${keyBase}-faq-q-${itemIndex}`)
@@ -648,12 +691,10 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                               }}
                             >
                               {item.question}
-                            </strong>
+                            </summary>
                             <p
                               className="builder-editable"
-                              contentEditable={
-                                editingKey === `${keyBase}-faq-a-${itemIndex}`
-                              }
+                              contentEditable={editingKey === `${keyBase}-faq-a-${itemIndex}`}
                               suppressContentEditableWarning
                               onDoubleClick={() =>
                                 setEditingKey(`${keyBase}-faq-a-${itemIndex}`)
@@ -670,7 +711,7 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                             >
                               {item.answer}
                             </p>
-                          </div>
+                          </details>
                         )
                       )}
                     </div>
@@ -826,6 +867,200 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                     </button>
                     {blockGenerateError && blockGeneratingIndex === index && (
                       <p className="error">{blockGenerateError}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {block.block_type === "process_map" && (
+                <div className="section builder-live process-map">
+                  <div className="container">
+                    <h2
+                      className="section-title builder-editable"
+                      contentEditable={editingKey === `${keyBase}-process-title`}
+                      suppressContentEditableWarning
+                      onDoubleClick={() => setEditingKey(`${keyBase}-process-title`)}
+                      onBlur={(event) => {
+                        updateBlockContent(index, "title", event.currentTarget.textContent ?? "");
+                        setEditingKey(null);
+                      }}
+                    >
+                      {block.content.title}
+                    </h2>
+                    <div className="process-map-track builder-process">
+                      {(block.content.steps ?? []).map(
+                        (
+                          step: { title?: string; subtitle?: string; items?: string[] },
+                          stepIndex: number
+                        ) => (
+                          <div
+                            className="process-step builder-item"
+                            key={`process-${stepIndex}`}
+                            draggable
+                            onDragStart={() => setDragStep({ blockIndex: index, stepIndex })}
+                            onDragOver={(event) => event.preventDefault()}
+                            onDrop={() => handleStepDrop(index, stepIndex)}
+                          >
+                            <div className="builder-item-handle" title="Перетащить">
+                              ⋮⋮
+                            </div>
+                            <div className="process-node">
+                              <span className="process-index">{stepIndex + 1}</span>
+                              <h3
+                                className="builder-editable"
+                                contentEditable={
+                                  editingKey === `${keyBase}-process-title-${stepIndex}`
+                                }
+                                suppressContentEditableWarning
+                                onDoubleClick={() =>
+                                  setEditingKey(`${keyBase}-process-title-${stepIndex}`)
+                                }
+                                onBlur={(event) => {
+                                  const updated = [...(block.content.steps ?? [])];
+                                  updated[stepIndex] = {
+                                    ...updated[stepIndex],
+                                    title: event.currentTarget.textContent ?? ""
+                                  };
+                                  updateBlockContent(index, "steps", updated);
+                                  setEditingKey(null);
+                                }}
+                              >
+                                {step.title}
+                              </h3>
+                              <p
+                                className="builder-editable"
+                                contentEditable={
+                                  editingKey === `${keyBase}-process-sub-${stepIndex}`
+                                }
+                                suppressContentEditableWarning
+                                onDoubleClick={() =>
+                                  setEditingKey(`${keyBase}-process-sub-${stepIndex}`)
+                                }
+                                onBlur={(event) => {
+                                  const updated = [...(block.content.steps ?? [])];
+                                  updated[stepIndex] = {
+                                    ...updated[stepIndex],
+                                    subtitle: event.currentTarget.textContent ?? ""
+                                  };
+                                  updateBlockContent(index, "steps", updated);
+                                  setEditingKey(null);
+                                }}
+                              >
+                                {step.subtitle}
+                              </p>
+                            </div>
+                            {(step.items ?? []).length > 0 && (
+                              <div className="process-substeps">
+                                {(step.items ?? []).map(
+                                  (item: string, itemIndex: number) => (
+                                    <div
+                                      className="process-substep builder-editable"
+                                      key={`process-item-${stepIndex}-${itemIndex}`}
+                                      contentEditable={
+                                        editingKey ===
+                                        `${keyBase}-process-item-${stepIndex}-${itemIndex}`
+                                      }
+                                      suppressContentEditableWarning
+                                      onDoubleClick={() =>
+                                        setEditingKey(
+                                          `${keyBase}-process-item-${stepIndex}-${itemIndex}`
+                                        )
+                                      }
+                                      onBlur={(event) => {
+                                        const updated = [...(block.content.steps ?? [])];
+                                        const items = [...(updated[stepIndex]?.items ?? [])];
+                                        items[itemIndex] = event.currentTarget.textContent ?? "";
+                                        updated[stepIndex] = { ...updated[stepIndex], items };
+                                        updateBlockContent(index, "steps", updated);
+                                        setEditingKey(null);
+                                      }}
+                                    >
+                                      {item}
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            )}
+                            <button
+                              className="btn btn-secondary builder-inline-button"
+                              type="button"
+                              onClick={() => {
+                                const updated = [...(block.content.steps ?? [])];
+                                const items = [...(updated[stepIndex]?.items ?? [])];
+                                items.push("Новый подпункт");
+                                updated[stepIndex] = { ...updated[stepIndex], items };
+                                updateBlockContent(index, "steps", updated);
+                              }}
+                            >
+                              Добавить подпункт
+                            </button>
+                          </div>
+                        )
+                      )}
+                    </div>
+                    <button
+                      className="btn btn-secondary builder-inline-button"
+                      type="button"
+                      onClick={() => {
+                        const updated = [...(block.content.steps ?? [])];
+                        updated.push({
+                          title: "Новый шаг",
+                          subtitle: "Пояснение",
+                          items: ["Подшаг"]
+                        });
+                        updateBlockContent(index, "steps", updated);
+                      }}
+                    >
+                      Добавить шаг
+                    </button>
+                    <button
+                      className="btn btn-secondary builder-inline-button"
+                      type="button"
+                      onClick={() => generateTextForBlock(index)}
+                      disabled={blockGeneratingIndex === index}
+                    >
+                      {blockGeneratingIndex === index ? "Генерируем..." : "AI заполнить"}
+                    </button>
+                    {blockGenerateError && blockGeneratingIndex === index && (
+                      <p className="error">{blockGenerateError}</p>
+                    )}
+                    {block.content.result && (
+                      <div className="process-result">
+                        <h3
+                          className="builder-editable"
+                          contentEditable={editingKey === `${keyBase}-process-result-title`}
+                          suppressContentEditableWarning
+                          onDoubleClick={() =>
+                            setEditingKey(`${keyBase}-process-result-title`)
+                          }
+                          onBlur={(event) => {
+                            updateBlockContent(index, "result", {
+                              ...(block.content.result ?? {}),
+                              title: event.currentTarget.textContent ?? ""
+                            });
+                            setEditingKey(null);
+                          }}
+                        >
+                          {block.content.result.title}
+                        </h3>
+                        <p
+                          className="builder-editable"
+                          contentEditable={editingKey === `${keyBase}-process-result-subtitle`}
+                          suppressContentEditableWarning
+                          onDoubleClick={() =>
+                            setEditingKey(`${keyBase}-process-result-subtitle`)
+                          }
+                          onBlur={(event) => {
+                            updateBlockContent(index, "result", {
+                              ...(block.content.result ?? {}),
+                              subtitle: event.currentTarget.textContent ?? ""
+                            });
+                            setEditingKey(null);
+                          }}
+                        >
+                          {block.content.result.subtitle}
+                        </p>
+                      </div>
                     )}
                   </div>
                 </div>
