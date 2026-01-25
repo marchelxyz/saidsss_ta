@@ -534,6 +534,20 @@ img {
   font-size: 14px;
 }
 
+.footer-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+}
+
+.footer-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+  display: block;
+}
+
 .nav {
   display: flex;
   justify-content: space-between;
