@@ -53,9 +53,7 @@ export default function SiteFooter({ settings }: { settings: SiteSettings }) {
           {socialLinks.length > 0 && (
             <div className="footer-links">
               {socialLinks.map((item) => (
-                <a key={item.label} href={item.href} target="_blank" rel="noreferrer">
-                  {item.label}
-                </a>
+                <span key={item.label}>{renderSocialLink(item)}</span>
               ))}
             </div>
           )}
@@ -98,6 +96,32 @@ function buildSocialLinks(settings: SiteSettings): SocialLink[] {
     links.push({ label: "Instagram", href: settings.instagram_url });
   }
   return links;
+}
+
+/**
+ * Render a social link and replace Telegram text with icon.
+ */
+function renderSocialLink(link: SocialLink) {
+  const isTelegram = link.label === "Telegram";
+  return (
+    <a
+      href={link.href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={link.label}
+      title={link.label}
+    >
+      {isTelegram ? (
+        <img
+          src="/telegram-icon.svg"
+          alt="Telegram"
+          style={{ width: 20, height: 20, display: "inline-block" }}
+        />
+      ) : (
+        link.label
+      )}
+    </a>
+  );
 }
 
 /**
