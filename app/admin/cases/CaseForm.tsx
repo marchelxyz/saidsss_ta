@@ -116,6 +116,30 @@ export default function CaseForm({ initial }: { initial?: Partial<CaseItem> }) {
     setStatus("Фото загружены");
   };
 
+  const onUploadCover = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    if (!form.id) {
+      setStatus("Сначала сохраните кейс, чтобы загрузить обложку.");
+      return;
+    }
+    setStatus("Загружаем обложку...");
+    const formData = new FormData();
+    formData.append("file", files[0]);
+    const response = await fetch(`/api/admin/cases/${form.id}/cover`, {
+      method: "POST",
+      body: formData
+    });
+    const data = (await response.json().catch(() => ({}))) as { url?: string; message?: string };
+    if (!response.ok) {
+      setStatus(data.message ?? "Ошибка загрузки обложки");
+      return;
+    }
+    if (data.url) {
+      setForm((prev) => ({ ...prev, cover_url: data.url ?? "" }));
+    }
+    setStatus("Обложка загружена");
+  };
+
   return (
     <div className="admin-form">
       <div>
@@ -165,6 +189,20 @@ export default function CaseForm({ initial }: { initial?: Partial<CaseItem> }) {
       <div>
         <label>Обложка (URL)</label>
         <input name="cover_url" value={form.cover_url} onChange={onChange} />
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(event) => onUploadCover(event.target.files)}
+        />
+        {form.cover_url && (
+          <div className="admin-card" style={{ marginTop: 12 }}>
+            <img
+              src={form.cover_url}
+              alt="Обложка кейса"
+              style={{ width: "100%", borderRadius: 12 }}
+            />
+          </div>
+        )}
       </div>
       <div>
         <label>Фотографии кейса</label>
