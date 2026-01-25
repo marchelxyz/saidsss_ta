@@ -1204,9 +1204,7 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
                 {buildPreviewLinks(settings).length > 0 && (
                   <div className="footer-links">
                     {buildPreviewLinks(settings).map((item) => (
-                      <a key={item.label} href={item.href} target="_blank" rel="noreferrer">
-                        {item.label}
-                      </a>
+                      <span key={item.label}>{renderPreviewSocialLink(item)}</span>
                     ))}
                   </div>
                 )}
@@ -1257,6 +1255,32 @@ function buildPreviewLinks(settings: SettingsData): PreviewLink[] {
     links.push({ label: "Instagram", href: settings.instagram_url });
   }
   return links;
+}
+
+/**
+ * Render preview social link with icon for Telegram.
+ */
+function renderPreviewSocialLink(link: PreviewLink) {
+  const isTelegram = link.label === "Telegram";
+  return (
+    <a
+      href={link.href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={link.label}
+      title={link.label}
+    >
+      {isTelegram ? (
+        <img
+          src="/telegram-icon.svg"
+          alt="Telegram"
+          style={{ width: 20, height: 20, display: "inline-block" }}
+        />
+      ) : (
+        link.label
+      )}
+    </a>
+  );
 }
 
 /**
