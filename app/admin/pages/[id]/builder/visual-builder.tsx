@@ -1190,8 +1190,16 @@ export default function VisualBuilder({ initialPage, initialBlocks }: VisualBuil
               <div>
                 <strong>Контакты</strong>
                 {settings.telegram && <p>Telegram: {settings.telegram}</p>}
-                {settings.email && <p>Email: {settings.email}</p>}
-                {settings.phone && <p>Телефон: {settings.phone}</p>}
+                {settings.email && (
+                  <p>
+                    Email: <a href={buildPreviewEmailHref(settings.email)}>{settings.email}</a>
+                  </p>
+                )}
+                {settings.phone && (
+                  <p>
+                    Телефон: <a href={buildPreviewPhoneHref(settings.phone)}>{settings.phone}</a>
+                  </p>
+                )}
                 {settings.address && <p>Адрес: {settings.address}</p>}
                 {buildPreviewLinks(settings).length > 0 && (
                   <div className="footer-links">
@@ -1249,4 +1257,20 @@ function buildPreviewLinks(settings: SettingsData): PreviewLink[] {
     links.push({ label: "Instagram", href: settings.instagram_url });
   }
   return links;
+}
+
+/**
+ * Build a mailto link for the preview footer.
+ */
+function buildPreviewEmailHref(email?: string | null) {
+  return email ? `mailto:${email}` : "";
+}
+
+/**
+ * Build a tel link for the preview footer.
+ */
+function buildPreviewPhoneHref(phone?: string | null) {
+  if (!phone) return "";
+  const normalized = phone.replace(/[^\d+]/g, "");
+  return `tel:${normalized || phone}`;
 }
