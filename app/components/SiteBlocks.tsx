@@ -44,6 +44,7 @@ type ArticleSummary = {
 type CaseSummary = {
   id: string;
   title: string;
+  slug: string;
   industry?: string | null;
   result?: string | null;
   metrics?: string | null;
@@ -403,6 +404,9 @@ export default function SiteBlocks({
                       {item.industry && <p>Отрасль: {item.industry}</p>}
                       {item.result && <p>Результат: {item.result}</p>}
                       {item.metrics && <p>Метрики: {item.metrics}</p>}
+                      <a className="btn btn-secondary" href={`/cases/${item.slug}`}>
+                        Открыть кейс
+                      </a>
                     </div>
                   ))}
                 </div>
