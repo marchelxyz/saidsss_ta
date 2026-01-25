@@ -5,11 +5,20 @@ export const dynamic = "force-dynamic";
 
 export default async function CaseEditPage({ params }: { params: { id: string } }) {
   const pool = getPool();
-  const result = await pool.query(
-    `select id, title, slug, company_name, provider_name, source_url, country, industry, challenge, solution, result, metrics, cover_url, published
-     from cases where id = $1`,
-    [params.id]
-  );
+  const [result, imagesResult] = await Promise.all([
+    pool.query(
+      `select id, title, slug, company_name, provider_name, source_url, country, industry, challenge, solution, result, metrics, cover_url, published
+       from cases where id = $1`,
+      [params.id]
+    ),
+    pool.query(
+      `select id, image_url, sort_order
+       from case_images
+       where case_id = $1
+       order by sort_order asc, created_at asc`,
+      [params.id]
+    )
+  ]);
 
   const item = result.rows[0];
 
@@ -22,7 +31,7 @@ export default async function CaseEditPage({ params }: { params: { id: string } 
       <div className="admin-toolbar">
         <h1 className="section-title">Редактирование кейса</h1>
       </div>
-      <CaseForm initial={item} />
+      <CaseForm initial={{ ...item, images: imagesResult.rows }} />
     </div>
   );
 }
