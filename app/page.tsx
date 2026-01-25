@@ -147,6 +147,9 @@ export default async function Home() {
   const navItems = useBuilder
     ? buildNavItemsFromBlocks(homeBlocksResult.rows)
     : [];
+  const blockTypes = new Set(homeBlocksResult.rows.map((block) => block.block_type));
+  const hasCasesBlock = blockTypes.has("cases");
+  const hasArticlesBlock = blockTypes.has("articles");
 
   return (
     <>
@@ -183,6 +186,8 @@ export default async function Home() {
           <SiteBlocks
             blocks={homeBlocksResult.rows}
             sourcePage="home"
+            articles={articles}
+            cases={cases}
             contacts={contacts}
             policyUrl={settings.policy_url ?? null}
             social={settings}
@@ -311,48 +316,8 @@ export default async function Home() {
               </div>
             </section>
 
-            {cases.length > 0 && (
-              <section className="section" id="cases">
-                <div className="container">
-                  <h2 className="section-title">Кейсы</h2>
-                  <p className="section-subtitle">
-                    Реальные примеры внедрения AI и автоматизаций для бизнеса.
-                  </p>
-                  <div className="grid">
-                    {cases.map((item) => (
-                      <div className="card" key={item.id}>
-                        <h3>{item.title}</h3>
-                        {item.industry && <p>Отрасль: {item.industry}</p>}
-                        {item.result && <p>Результат: {item.result}</p>}
-                        {item.metrics && <p>Метрики: {item.metrics}</p>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {articles.length > 0 && (
-              <section className="section" id="articles">
-                <div className="container">
-                  <h2 className="section-title">Статьи</h2>
-                  <p className="section-subtitle">
-                    Практика, разборы кейсов и подходы к AI-трансформации бизнеса.
-                  </p>
-                  <div className="grid">
-                    {articles.map((article) => (
-                      <div className="card" key={article.id}>
-                        <h3>{article.title}</h3>
-                        <p>{article.excerpt ?? "Описание появится после редактирования."}</p>
-                        <a className="btn btn-secondary" href={`/articles/${article.slug}`}>
-                          Читать статью
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
-            )}
+            {renderCasesSection(cases)}
+            {renderArticlesSection(articles)}
 
             <section className="section" id="faq">
               <div className="container">
@@ -394,9 +359,81 @@ export default async function Home() {
             </section>
           </>
         )}
+        {useBuilder && !hasCasesBlock && renderCasesSection(cases)}
+        {useBuilder && !hasArticlesBlock && renderArticlesSection(articles)}
       </main>
 
       <SiteFooter settings={settings} />
     </>
+  );
+}
+
+/**
+ * Render the cases section for the homepage.
+ */
+function renderCasesSection(
+  items: Array<{
+    id: string;
+    title: string;
+    industry?: string | null;
+    result?: string | null;
+    metrics?: string | null;
+  }>
+) {
+  if (items.length === 0) return null;
+  return (
+    <section className="section" id="cases">
+      <div className="container">
+        <h2 className="section-title">Кейсы</h2>
+        <p className="section-subtitle">
+          Реальные примеры внедрения AI и автоматизаций для бизнеса.
+        </p>
+        <div className="grid">
+          {items.map((item) => (
+            <div className="card" key={item.id}>
+              <h3>{item.title}</h3>
+              {item.industry && <p>Отрасль: {item.industry}</p>}
+              {item.result && <p>Результат: {item.result}</p>}
+              {item.metrics && <p>Метрики: {item.metrics}</p>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Render the articles section for the homepage.
+ */
+function renderArticlesSection(
+  items: Array<{
+    id: string;
+    title: string;
+    slug: string;
+    excerpt?: string | null;
+  }>
+) {
+  if (items.length === 0) return null;
+  return (
+    <section className="section" id="articles">
+      <div className="container">
+        <h2 className="section-title">Статьи</h2>
+        <p className="section-subtitle">
+          Практика, разборы кейсов и подходы к AI-трансформации бизнеса.
+        </p>
+        <div className="grid">
+          {items.map((article) => (
+            <div className="card" key={article.id}>
+              <h3>{article.title}</h3>
+              <p>{article.excerpt ?? "Описание появится после редактирования."}</p>
+              <a className="btn btn-secondary" href={`/articles/${article.slug}`}>
+                Читать статью
+              </a>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
