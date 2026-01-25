@@ -11,6 +11,8 @@ type SiteBlock = {
 type SiteBlocksProps = {
   blocks: SiteBlock[];
   sourcePage?: string;
+  articles?: ArticleSummary[];
+  cases?: CaseSummary[];
   contacts?: {
     telegram?: string | null;
     email?: string | null;
@@ -31,9 +33,27 @@ type SocialLink = {
   href: string;
 };
 
+type ArticleSummary = {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  cover_url?: string | null;
+};
+
+type CaseSummary = {
+  id: string;
+  title: string;
+  industry?: string | null;
+  result?: string | null;
+  metrics?: string | null;
+};
+
 export default function SiteBlocks({
   blocks,
   sourcePage,
+  articles,
+  cases,
   contacts,
   policyUrl,
   social
@@ -360,6 +380,57 @@ export default function SiteBlocks({
                       <li key={`case-${itemIndex}`}>{item}</li>
                     ))}
                   </ul>
+                </div>
+              </div>
+            </section>
+          );
+        }
+
+        if (block.block_type === "cases") {
+          if (!cases || cases.length === 0) return null;
+          const sectionId = getSectionId(block.content.title as string | undefined);
+          return (
+            <section className="section" key={`cases-${index}`} id={sectionId}>
+              <div className="container">
+                <h2 className="section-title">{block.content.title ?? "Кейсы"}</h2>
+                {block.content.subtitle && (
+                  <p className="section-subtitle">{block.content.subtitle}</p>
+                )}
+                <div className="grid">
+                  {cases.map((item) => (
+                    <div className="card" key={item.id} style={cardStyle}>
+                      <h3>{item.title}</h3>
+                      {item.industry && <p>Отрасль: {item.industry}</p>}
+                      {item.result && <p>Результат: {item.result}</p>}
+                      {item.metrics && <p>Метрики: {item.metrics}</p>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          );
+        }
+
+        if (block.block_type === "articles") {
+          if (!articles || articles.length === 0) return null;
+          const sectionId = getSectionId(block.content.title as string | undefined);
+          return (
+            <section className="section" key={`articles-${index}`} id={sectionId}>
+              <div className="container">
+                <h2 className="section-title">{block.content.title ?? "Статьи"}</h2>
+                {block.content.subtitle && (
+                  <p className="section-subtitle">{block.content.subtitle}</p>
+                )}
+                <div className="grid">
+                  {articles.map((article) => (
+                    <div className="card" key={article.id} style={cardStyle}>
+                      <h3>{article.title}</h3>
+                      <p>{article.excerpt ?? "Описание появится после редактирования."}</p>
+                      <a className="btn btn-secondary" href={`/articles/${article.slug}`}>
+                        Читать статью
+                      </a>
+                    </div>
+                  ))}
                 </div>
               </div>
             </section>

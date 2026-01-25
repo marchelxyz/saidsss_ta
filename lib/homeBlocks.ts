@@ -81,6 +81,22 @@ export function getDefaultHomeBlocks(): BuilderBlock[] {
       style: { radius: 16 }
     },
     {
+      block_type: "cases",
+      content: {
+        title: "Кейсы",
+        subtitle: "Реальные примеры внедрения AI и автоматизаций для бизнеса."
+      },
+      style: { radius: 16 }
+    },
+    {
+      block_type: "articles",
+      content: {
+        title: "Статьи",
+        subtitle: "Практика, разборы кейсов и подходы к AI-трансформации бизнеса."
+      },
+      style: { radius: 16 }
+    },
+    {
       block_type: "faq",
       content: {
         title: "FAQ",
