@@ -240,6 +240,40 @@ export async function uploadCaseImage(
   return `${baseUrl}/${key}`;
 }
 
+/**
+ * Upload a case cover image and return the public URL.
+ */
+export async function uploadCaseCover(
+  buffer: Buffer,
+  filename: string,
+  contentType: string,
+  caseId: string
+) {
+  const { endpoint, region, bucket, accessKeyId, secretAccessKey, publicBaseUrl } =
+    getS3Config();
+  const s3 = new S3Client({
+    region,
+    endpoint,
+    credentials: { accessKeyId, secretAccessKey }
+  });
+
+  const ext = resolveImageExtension(filename, contentType);
+  const key = `cases/${caseId}/cover.${ext}`;
+
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+      ACL: "public-read"
+    })
+  );
+
+  const baseUrl = publicBaseUrl || `${endpoint.replace(/\/$/, "")}/${bucket}`;
+  return `${baseUrl}/${key}`;
+}
+
 function resolveImageExtension(filename: string, contentType: string) {
   const parts = filename.split(".");
   const fromName = parts.length > 1 ? parts.pop()?.toLowerCase() : "";
