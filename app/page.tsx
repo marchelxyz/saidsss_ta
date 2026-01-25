@@ -83,7 +83,7 @@ export default async function Home() {
        order by created_at desc`
     ),
     pool.query(
-      `select id, title, industry, result, metrics
+      `select id, title, slug, industry, result, metrics
        from cases where published = true
        order by created_at desc`
     ),
@@ -116,6 +116,7 @@ export default async function Home() {
   const cases = casesResult.rows as Array<{
     id: string;
     title: string;
+    slug: string;
     industry?: string | null;
     result?: string | null;
     metrics?: string | null;
@@ -375,6 +376,7 @@ function renderCasesSection(
   items: Array<{
     id: string;
     title: string;
+    slug: string;
     industry?: string | null;
     result?: string | null;
     metrics?: string | null;
@@ -395,6 +397,9 @@ function renderCasesSection(
               {item.industry && <p>Отрасль: {item.industry}</p>}
               {item.result && <p>Результат: {item.result}</p>}
               {item.metrics && <p>Метрики: {item.metrics}</p>}
+              <a className="btn btn-secondary" href={`/cases/${item.slug}`}>
+                Открыть кейс
+              </a>
             </div>
           ))}
         </div>
