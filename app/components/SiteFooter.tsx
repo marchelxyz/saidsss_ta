@@ -26,6 +26,8 @@ type SocialLink = {
 export default function SiteFooter({ settings }: { settings: SiteSettings }) {
   const socialLinks = buildSocialLinks(settings);
   const policyUrl = settings.policy_url ?? "";
+  const emailHref = buildEmailHref(settings.email);
+  const phoneHref = buildPhoneHref(settings.phone);
 
   return (
     <footer className="footer">
@@ -37,8 +39,16 @@ export default function SiteFooter({ settings }: { settings: SiteSettings }) {
         <div>
           <strong>Контакты</strong>
           {settings.telegram && <p>Telegram: {settings.telegram}</p>}
-          {settings.email && <p>Email: {settings.email}</p>}
-          {settings.phone && <p>Телефон: {settings.phone}</p>}
+          {settings.email && (
+            <p>
+              Email: <a href={emailHref}>{settings.email}</a>
+            </p>
+          )}
+          {settings.phone && (
+            <p>
+              Телефон: <a href={phoneHref}>{settings.phone}</a>
+            </p>
+          )}
           {settings.address && <p>Адрес: {settings.address}</p>}
           {socialLinks.length > 0 && (
             <div className="footer-links">
@@ -88,4 +98,20 @@ function buildSocialLinks(settings: SiteSettings): SocialLink[] {
     links.push({ label: "Instagram", href: settings.instagram_url });
   }
   return links;
+}
+
+/**
+ * Build a mailto link from the email value.
+ */
+function buildEmailHref(email?: string | null) {
+  return email ? `mailto:${email}` : "";
+}
+
+/**
+ * Build a tel link from the phone value.
+ */
+function buildPhoneHref(phone?: string | null) {
+  if (!phone) return "";
+  const normalized = phone.replace(/[^\d+]/g, "");
+  return `tel:${normalized || phone}`;
 }
