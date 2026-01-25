@@ -16,6 +16,7 @@ type CaseItem = {
   result: string;
   metrics: string;
   cover_url: string;
+  images: Array<{ id: string; image_url: string; sort_order: number }>;
   published: boolean;
 };
 
@@ -34,6 +35,7 @@ export default function CaseForm({ initial }: { initial?: Partial<CaseItem> }) {
     result: initial?.result ?? "",
     metrics: initial?.metrics ?? "",
     cover_url: initial?.cover_url ?? "",
+    images: initial?.images ?? [],
     published: initial?.published ?? false
   });
   const [status, setStatus] = useState("");
@@ -86,6 +88,34 @@ export default function CaseForm({ initial }: { initial?: Partial<CaseItem> }) {
     setStatus("Сохранено");
   };
 
+  const onUploadImages = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    if (!form.id) {
+      setStatus("Сначала сохраните кейс, чтобы загрузить фото.");
+      return;
+    }
+    setStatus("Загружаем фото...");
+    const formData = new FormData();
+    Array.from(files).forEach((file) => formData.append("files", file));
+    const response = await fetch(`/api/admin/cases/${form.id}/images`, {
+      method: "POST",
+      body: formData
+    });
+    const data = (await response.json().catch(() => ({}))) as {
+      items?: Array<{ id: string; image_url: string; sort_order: number }>;
+      message?: string;
+    };
+    if (!response.ok) {
+      setStatus(data.message ?? "Ошибка загрузки");
+      return;
+    }
+    setForm((prev) => ({
+      ...prev,
+      images: [...prev.images, ...(data.items ?? [])]
+    }));
+    setStatus("Фото загружены");
+  };
+
   return (
     <div className="admin-form">
       <div>
@@ -135,6 +165,28 @@ export default function CaseForm({ initial }: { initial?: Partial<CaseItem> }) {
       <div>
         <label>Обложка (URL)</label>
         <input name="cover_url" value={form.cover_url} onChange={onChange} />
+      </div>
+      <div>
+        <label>Фотографии кейса</label>
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={(event) => onUploadImages(event.target.files)}
+        />
+        {form.images.length > 0 && (
+          <div className="admin-grid" style={{ marginTop: 12 }}>
+            {form.images.map((image) => (
+              <div key={image.id} className="admin-card">
+                <img
+                  src={image.image_url}
+                  alt="Фото кейса"
+                  style={{ width: "100%", borderRadius: 12 }}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
       <label>
         <input type="checkbox" checked={form.published} onChange={onToggle} /> Публиковать

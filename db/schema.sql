@@ -91,6 +91,16 @@ alter table cases
 alter table cases
   add column if not exists country text;
 
+create table if not exists case_images (
+  id uuid primary key default gen_random_uuid(),
+  case_id uuid references cases(id) on delete cascade,
+  image_url text not null,
+  sort_order int default 0,
+  created_at timestamptz default now()
+);
+
+create index if not exists case_images_case_idx on case_images (case_id, sort_order);
+
 create table if not exists lead_tags (
   id uuid primary key default gen_random_uuid(),
   name text unique not null,

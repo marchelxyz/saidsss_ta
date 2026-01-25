@@ -204,3 +204,51 @@ export async function uploadScreenshotVariants(buffer: Buffer, pageId: string) {
     jpgUrl: `${baseUrl}/${basePath}.jpg`
   };
 }
+
+/**
+ * Upload a single image for a case.
+ */
+export async function uploadCaseImage(
+  buffer: Buffer,
+  filename: string,
+  contentType: string,
+  caseId: string
+) {
+  const { endpoint, region, bucket, accessKeyId, secretAccessKey, publicBaseUrl } =
+    getS3Config();
+  const s3 = new S3Client({
+    region,
+    endpoint,
+    credentials: { accessKeyId, secretAccessKey }
+  });
+
+  const ext = resolveImageExtension(filename, contentType);
+  const id = randomUUID();
+  const key = `cases/${caseId}/${id}.${ext}`;
+
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+      ACL: "public-read"
+    })
+  );
+
+  const baseUrl = publicBaseUrl || `${endpoint.replace(/\/$/, "")}/${bucket}`;
+  return `${baseUrl}/${key}`;
+}
+
+function resolveImageExtension(filename: string, contentType: string) {
+  const parts = filename.split(".");
+  const fromName = parts.length > 1 ? parts.pop()?.toLowerCase() : "";
+  if (fromName && ["jpg", "jpeg", "png", "webp", "avif", "gif"].includes(fromName)) {
+    return fromName === "jpeg" ? "jpg" : fromName;
+  }
+  if (contentType === "image/png") return "png";
+  if (contentType === "image/webp") return "webp";
+  if (contentType === "image/avif") return "avif";
+  if (contentType === "image/gif") return "gif";
+  return "jpg";
+}
