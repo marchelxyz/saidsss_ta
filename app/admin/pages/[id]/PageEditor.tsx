@@ -32,6 +32,8 @@ const BLOCK_TYPES = [
   { value: "list", label: "Список" },
   { value: "faq", label: "FAQ" },
   { value: "process_map", label: "Процесс (схема)" },
+  { value: "cases", label: "Кейсы" },
+  { value: "articles", label: "Статьи" },
   { value: "image", label: "Изображение" },
   { value: "contact", label: "Контакты" }
 ];
@@ -435,6 +437,38 @@ export default function PageEditor({ initialPage, initialBlocks }: PageEditorPro
                 </>
               )}
 
+              {block.block_type === "cases" && (
+                <>
+                  <label>Заголовок</label>
+                  <input
+                    value={block.content.title ?? ""}
+                    onChange={(event) => updateBlockContent(index, "title", event.target.value)}
+                  />
+                  <label>Подзаголовок</label>
+                  <textarea
+                    value={block.content.subtitle ?? ""}
+                    onChange={(event) => updateBlockContent(index, "subtitle", event.target.value)}
+                    onInput={(event) => autoResizeTextArea(event.currentTarget)}
+                  />
+                </>
+              )}
+
+              {block.block_type === "articles" && (
+                <>
+                  <label>Заголовок</label>
+                  <input
+                    value={block.content.title ?? ""}
+                    onChange={(event) => updateBlockContent(index, "title", event.target.value)}
+                  />
+                  <label>Подзаголовок</label>
+                  <textarea
+                    value={block.content.subtitle ?? ""}
+                    onChange={(event) => updateBlockContent(index, "subtitle", event.target.value)}
+                    onInput={(event) => autoResizeTextArea(event.currentTarget)}
+                  />
+                </>
+              )}
+
               {block.block_type === "contact" && (
                 <>
                   <label>Заголовок</label>
@@ -517,6 +551,24 @@ function buildDefaultBlock(type: string): BlockData {
           title: "Блок с изображением",
           text: "Описание блока",
           image_url: ""
+        },
+        style: { radius: 16 }
+      };
+    case "cases":
+      return {
+        block_type: "cases",
+        content: {
+          title: "Кейсы",
+          subtitle: "Реальные примеры внедрения AI и автоматизаций для бизнеса."
+        },
+        style: { radius: 16 }
+      };
+    case "articles":
+      return {
+        block_type: "articles",
+        content: {
+          title: "Статьи",
+          subtitle: "Практика, разборы кейсов и подходы к AI-трансформации бизнеса."
         },
         style: { radius: 16 }
       };
